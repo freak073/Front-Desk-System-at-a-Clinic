@@ -1,2 +1,14 @@
 {
+  "sqltools.connections": [
+    {
+      "name": "Front Desk System",
+      "driver": "MySQL",
+      "server": "localhost",
+      "port": 3306,
+      "database": "front_desk_system",
+      "username": "root",
+      "password": "Root123",
+      "connectionTimeout": 60000
+    }
+  ]
 }

@@ -23,8 +23,8 @@ import { AppointmentsModule } from './appointments/appointments.module';
         username: configService.get('DB_USERNAME', 'root'),
         password: configService.get('DB_PASSWORD', ''),
         database: configService.get('DB_NAME', 'front_desk_system'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        entities: [__dirname + '/entities/*.entity{.ts,.js}'],
+        synchronize: false, // Disabled since we have manual schema setup
         logging: configService.get('NODE_ENV') === 'development',
         extra: {
           connectionLimit: 10,
