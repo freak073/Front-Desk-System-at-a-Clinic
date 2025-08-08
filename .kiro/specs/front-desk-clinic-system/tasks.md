@@ -59,9 +59,6 @@ This implementation plan converts the feature design into a series of coding tas
 
 - [x] 6. Queue Management Backend Implementation
 
-
-
-
   - Create QueueEntry service with queue operations
   - Implement automatic queue number generation and sequencing
   - Add queue status management (Waiting, With Doctor, Completed)
