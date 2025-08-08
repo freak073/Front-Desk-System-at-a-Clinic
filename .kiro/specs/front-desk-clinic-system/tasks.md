@@ -48,8 +48,6 @@ This implementation plan converts the feature design into a series of coding tas
 
 - [x] 5. Patient Management Backend Implementation
 
-
-
   - Create Patient service with CRUD operations
   - Implement Patient controller with REST endpoints
   - Add patient search functionality with real-time search capabilities
@@ -59,7 +57,8 @@ This implementation plan converts the feature design into a series of coding tas
   - Write integration tests for patient API endpoints
   - _Requirements: 7.1, 8.1, 8.2_
 
-- [ ] 6. Queue Management Backend Implementation
+- [x] 6. Queue Management Backend Implementation
+
   - Create QueueEntry service with queue operations
   - Implement automatic queue number generation and sequencing
   - Add queue status management (Waiting, With Doctor, Completed)
