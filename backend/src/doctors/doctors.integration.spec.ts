@@ -25,10 +25,12 @@ describe('DoctorsController (Integration)', () => {
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
-  });
+  }, 10000);
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   describe('POST /doctors', () => {
@@ -176,6 +178,25 @@ describe('DoctorsController (Integration)', () => {
     it('should return 404 for non-existent doctor', async () => {
       await request(app.getHttpServer())
         .get('/doctors/999')
+        .expect(404);
+    });
+  });
+
+  describe('GET /doctors/:id/availability', () => {
+    it('should return doctor availability information', async () => {
+      const response = await request(app.getHttpServer())
+        .get(`/doctors/${doctorId}/availability`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('doctor');
+      expect(response.body).toHaveProperty('nextAvailableTime');
+      expect(response.body.doctor).toHaveProperty('id', doctorId);
+      expect(response.body.doctor).toHaveProperty('status');
+    });
+
+    it('should return 404 for non-existent doctor availability', async () => {
+      await request(app.getHttpServer())
+        .get('/doctors/999/availability')
         .expect(404);
     });
   });

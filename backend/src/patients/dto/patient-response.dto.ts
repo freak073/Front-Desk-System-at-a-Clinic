@@ -1,6 +1,6 @@
 import { Exclude, Expose, Transform } from 'class-transformer';
 
-export class DoctorResponseDto {
+export class PatientResponseDto {
   @Expose()
   id: number;
 
@@ -8,19 +8,10 @@ export class DoctorResponseDto {
   name: string;
 
   @Expose()
-  specialization: string;
+  contactInfo: string;
 
   @Expose()
-  gender: string;
-
-  @Expose()
-  location: string;
-
-  @Expose()
-  availabilitySchedule: object;
-
-  @Expose()
-  status: string;
+  medicalRecordNumber: string;
 
   @Expose()
   @Transform(({ value }) => value instanceof Date ? value.toISOString() : value)

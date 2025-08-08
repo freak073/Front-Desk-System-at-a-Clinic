@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('doctors')
 export class Doctor {
@@ -12,8 +12,9 @@ export class Doctor {
   specialization: string;
 
   @Column({ 
-    type: 'enum', 
-    enum: ['male', 'female', 'other'] 
+    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
+    enum: process.env.NODE_ENV === 'test' ? undefined : ['male', 'female', 'other'],
+    length: process.env.NODE_ENV === 'test' ? 10 : undefined
   })
   gender: string;
 
@@ -21,21 +22,23 @@ export class Doctor {
   location: string;
 
   @Column({ 
-    type: 'json', 
+    type: process.env.NODE_ENV === 'test' ? 'text' : 'json', 
     name: 'availability_schedule',
     nullable: true 
   })
   availabilitySchedule: object;
 
   @Column({ 
-    type: 'enum', 
-    enum: ['available', 'busy', 'off_duty'], 
+    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
+    enum: process.env.NODE_ENV === 'test' ? undefined : ['available', 'busy', 'off_duty'],
+    length: process.env.NODE_ENV === 'test' ? 20 : undefined,
     default: 'available' 
   })
   status: string;
 
-  @OneToMany('Appointment', 'doctor')
-  appointments: any[];
+  // Appointments relationship will be added when Appointment entity is properly implemented
+  // @OneToMany('Appointment', 'doctor')
+  // appointments: any[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

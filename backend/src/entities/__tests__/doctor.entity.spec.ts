@@ -40,7 +40,6 @@ describe('Doctor Entity', () => {
 
   it('should accept valid gender values', () => {
     const validGenders = ['male', 'female', 'other'];
-    
     validGenders.forEach((gender) => {
       doctor.gender = gender;
       expect(doctor.gender).toBe(gender);
@@ -49,7 +48,6 @@ describe('Doctor Entity', () => {
 
   it('should accept valid status values', () => {
     const validStatuses = ['available', 'busy', 'off_duty'];
-    
     validStatuses.forEach((status) => {
       doctor.status = status;
       expect(doctor.status).toBe(status);

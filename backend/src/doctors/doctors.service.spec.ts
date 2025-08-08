@@ -18,7 +18,6 @@ describe('DoctorsService', () => {
     location: 'Building A, Room 101',
     availabilitySchedule: { monday: '9:00-17:00' },
     status: 'available',
-    appointments: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -303,6 +302,46 @@ describe('DoctorsService', () => {
         where: { status: 'available' },
       });
       expect(result).toEqual([mockDoctor]);
+    });
+  });
+
+  describe('getAvailability', () => {
+    it('should return doctor availability with next available time for available doctor', async () => {
+      mockRepository.findOne.mockResolvedValue(mockDoctor);
+
+      const result = await service.getAvailability(1);
+
+      expect(mockRepository.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(result.doctor).toEqual(mockDoctor);
+      expect(result.nextAvailableTime).toBeDefined();
+      expect(typeof result.nextAvailableTime).toBe('string');
+    });
+
+    it('should return doctor availability with next available time for busy doctor', async () => {
+      const busyDoctor = { ...mockDoctor, status: 'busy' };
+      mockRepository.findOne.mockResolvedValue(busyDoctor);
+
+      const result = await service.getAvailability(1);
+
+      expect(result.doctor).toEqual(busyDoctor);
+      expect(result.nextAvailableTime).toBeDefined();
+      expect(typeof result.nextAvailableTime).toBe('string');
+    });
+
+    it('should return doctor availability with null next available time for off duty doctor', async () => {
+      const offDutyDoctor = { ...mockDoctor, status: 'off_duty' };
+      mockRepository.findOne.mockResolvedValue(offDutyDoctor);
+
+      const result = await service.getAvailability(1);
+
+      expect(result.doctor).toEqual(offDutyDoctor);
+      expect(result.nextAvailableTime).toBeNull();
+    });
+
+    it('should throw NotFoundException when doctor not found', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getAvailability(999)).rejects.toThrow(NotFoundException);
     });
   });
 });
