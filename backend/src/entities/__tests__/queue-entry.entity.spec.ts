@@ -39,7 +39,7 @@ describe('QueueEntry Entity', () => {
 
   it('should accept valid status values', () => {
     const validStatuses = ['waiting', 'with_doctor', 'completed'];
-    
+
     validStatuses.forEach((status) => {
       queueEntry.status = status;
       expect(queueEntry.status).toBe(status);
@@ -48,7 +48,7 @@ describe('QueueEntry Entity', () => {
 
   it('should accept valid priority values', () => {
     const validPriorities = ['normal', 'urgent'];
-    
+
     validPriorities.forEach((priority) => {
       queueEntry.priority = priority;
       expect(queueEntry.priority).toBe(priority);

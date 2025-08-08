@@ -88,7 +88,7 @@ Snapshots:   0 total
 Time:        2.613 s
 ```
 
-### Build Status:
+### Build Status
 
 - ✅ Backend builds successfully (`npm run build`)
 - ✅ Frontend builds successfully (Next.js build)
