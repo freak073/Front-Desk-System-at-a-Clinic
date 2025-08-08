@@ -282,7 +282,7 @@ export class User {
 }
 ```
 
-#### Doctor Entity
+#### Doctor Entity :
 ```typescript
 @Entity('doctors')
 export class Doctor {

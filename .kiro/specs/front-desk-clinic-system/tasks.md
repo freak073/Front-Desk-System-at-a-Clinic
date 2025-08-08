@@ -35,7 +35,10 @@ This implementation plan converts the feature design into a series of coding tas
   - Write integration tests for login/logout flows
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 4. Doctor Management Backend Implementation
+- [-] 4. Doctor Management Backend Implementation
+
+
+
   - Create Doctor service with CRUD operations
   - Implement Doctor controller with all REST endpoints
   - Add doctor search and filtering functionality by specialization, location, and availability
