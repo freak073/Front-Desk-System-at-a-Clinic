@@ -28,8 +28,6 @@ import { AppointmentsModule } from './appointments/appointments.module';
         logging: configService.get('NODE_ENV') === 'development',
         extra: {
           connectionLimit: 10,
-          acquireTimeout: 60000,
-          timeout: 60000,
         },
       }),
       inject: [ConfigService],

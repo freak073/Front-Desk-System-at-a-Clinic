@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { LocalStrategy } from './strategies/local.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '../entities/user.entity';
 
 describe('Auth Integration Tests', () => {
@@ -51,6 +52,7 @@ describe('Auth Integration Tests', () => {
       providers: [
         AuthService,
         LocalStrategy,
+        JwtStrategy,
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
@@ -144,20 +146,16 @@ describe('Auth Integration Tests', () => {
   });
 
   describe('Authentication endpoints without JWT guard', () => {
-    it('should return 500 for profile endpoint without JWT strategy configured', async () => {
-      // This test verifies that JWT guard is properly configured
-      // In a real environment with JWT strategy, this would return 401
+    it('should return 401 for profile endpoint without a valid JWT', async () => {
       await request(app.getHttpServer())
         .get('/auth/profile')
-        .expect(500);
+        .expect(401);
     });
 
-    it('should return 500 for logout endpoint without JWT strategy configured', async () => {
-      // This test verifies that JWT guard is properly configured
-      // In a real environment with JWT strategy, this would return 401
+    it('should return 401 for logout endpoint without a valid JWT', async () => {
       await request(app.getHttpServer())
         .post('/auth/logout')
-        .expect(500);
+        .expect(401);
     });
   });
 });
