@@ -1,11 +1,38 @@
+"use client";
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+
 export default function LoginPage() {
+  const { user, login, loading, error } = useAuth();
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [user, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!username || !password) {
+      setFormError('Please enter both username and password.');
+      return;
+    }
+    await login({ username, password });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="card max-w-md w-full">
         <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">
           Login to Front Desk System
         </h1>
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
               Username
@@ -16,6 +43,9 @@ export default function LoginPage() {
               name="username"
               className="input-field"
               placeholder="Enter your username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div>
@@ -28,18 +58,22 @@ export default function LoginPage() {
               name="password"
               className="input-field"
               placeholder="Enter your password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              disabled={loading}
             />
           </div>
+          {(formError || error) && (
+            <div className="text-red-600 text-sm text-center">{formError || error}</div>
+          )}
           <button
             type="submit"
             className="btn-primary w-full"
+            disabled={loading}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-        <p className="text-sm text-gray-600 text-center mt-4">
-          Authentication functionality will be implemented in later tasks
-        </p>
       </div>
     </div>
   );

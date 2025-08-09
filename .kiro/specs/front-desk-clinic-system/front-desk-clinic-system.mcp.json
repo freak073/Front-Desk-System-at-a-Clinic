@@ -1,0 +1,45 @@
+{
+  "project_name": "Front Desk Clinic System",
+  "mode": "sequential_task_execution",
+  "task_execution_policy": {
+    "start_task": 9,
+    "end_task": 22,
+    "progress_tracking_file": ".kiro/task-progress.json",
+    "on_start": [
+      "Read the progress tracking file",
+      "If missing, create with current_task = start_task",
+      "Resume from saved current_task"
+    ],
+    "on_task_complete": [
+      "Run backend & frontend tests",
+      "If all pass, increment current_task in progress file",
+      "Commit code + updated progress file with message 'Completed Task X'"
+    ],
+    "on_test_fail": [
+      "Stop advancing",
+      "Fix failing tests immediately",
+      "Retest before proceeding"
+    ]
+  },
+  "non_regression": {
+    "rule": "All previous tasks remain functional",
+    "strategy": [
+      "Run full test suite after each task",
+      "Rollback changes if regression is detected",
+      "Do not advance until regression is fixed"
+    ]
+  },
+  "task_source_files": {
+    "design": ".kiro/specs/front-desk-clinic-system/design.md",
+    "requirements": ".kiro/specs/front-desk-clinic-system/requirements.md",
+    "tasks": ".kiro/specs/front-desk-clinic-system/tasks.md",
+    "pdf_reference": "Front Desk System at a Clinic.pdf"
+  },
+  "development_rules": {
+    "preserve_backend_logic": true,
+    "respect_existing_code": true,
+    "maintain_logical_flow": true,
+    "self_correct_on_error": true,
+    "no_repeat_mistakes": true
+  }
+}

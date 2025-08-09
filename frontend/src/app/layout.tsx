@@ -8,13 +8,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
+  // Import AuthProvider here to wrap the app
+  const AuthProvider = require('../context/AuthContext').AuthProvider;
   return (
     <html lang="en">
       <body className="bg-gray-50 min-h-screen">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
