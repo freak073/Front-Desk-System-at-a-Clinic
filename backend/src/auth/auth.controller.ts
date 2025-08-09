@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { 
   Controller, 
   Post, 
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '../entities/user.entity';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

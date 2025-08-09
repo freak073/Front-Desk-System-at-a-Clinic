@@ -1,4 +1,5 @@
-import {
+import { ApiTags } from '@nestjs/swagger';
+import {   
   Controller,
   Post,
   Body,
@@ -18,6 +19,7 @@ import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AvailableSlotsQueryDto } from './dto/available-slots-query.dto';
 
+
 function getValidAppointmentDateTime() {
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -28,6 +30,7 @@ function getValidAppointmentDateTime() {
   return date.toISOString();
 }
 
+@ApiTags('Appointments')
 @Controller('appointments')
 @UseGuards(JwtAuthGuard)
 export class AppointmentsController {

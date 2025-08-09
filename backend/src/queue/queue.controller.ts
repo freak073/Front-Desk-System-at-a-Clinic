@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -17,6 +18,7 @@ import { QueueService } from './queue.service';
 import { CreateQueueEntryDto, UpdateQueueEntryDto, QueueEntryResponseDto, QueueQueryDto } from './dto';
 import { plainToClass } from 'class-transformer';
 
+@ApiTags('Queue')
 @Controller('queue')
 @UseInterceptors(ClassSerializerInterceptor)
 export class QueueController {

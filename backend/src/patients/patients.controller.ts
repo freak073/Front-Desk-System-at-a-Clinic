@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -17,6 +18,7 @@ import { PatientsService } from './patients.service';
 import { CreatePatientDto, UpdatePatientDto, PatientResponseDto, PatientQueryDto } from './dto';
 import { plainToClass } from 'class-transformer';
 
+@ApiTags('Patients')
 @Controller('patients')
 @UseInterceptors(ClassSerializerInterceptor)
 export class PatientsController {
