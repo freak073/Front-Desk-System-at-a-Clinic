@@ -155,7 +155,8 @@ function collectWebVitals(): void {
     const entries = entryList.getEntries();
     if (entries.length > 0) {
       const firstInput = entries[0];
-      metrics.fid = firstInput.processingStart - firstInput.startTime;
+  const fi: any = firstInput as any;
+  metrics.fid = (fi.processingStart || fi.startTime) - fi.startTime;
       logMetric('FID', metrics.fid);
     }
   });

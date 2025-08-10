@@ -108,9 +108,9 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  <form onSubmit={handleSubmit} className="space-y-4 text-gray-200">
       <div>
-        <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="patientId" className="block text-sm font-medium text-gray-300 mb-1">
           Patient
         </label>
         <select
@@ -118,8 +118,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           name="patientId"
           value={formData.patientId}
           onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-            errors.patientId ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent ${
+            errors.patientId ? 'border-red-500' : 'border-gray-600'
           }`}
         >
           <option value="">Select a patient</option>
@@ -133,7 +133,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="doctorId" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="doctorId" className="block text-sm font-medium text-gray-300 mb-1">
           Doctor
         </label>
         <select
@@ -141,8 +141,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           name="doctorId"
           value={formData.doctorId}
           onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-            errors.doctorId ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent ${
+            errors.doctorId ? 'border-red-500' : 'border-gray-600'
           }`}
         >
           <option value="">Select a doctor</option>
@@ -156,7 +156,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="appointmentDatetime" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="appointmentDatetime" className="block text-sm font-medium text-gray-300 mb-1">
           Appointment Date & Time
         </label>
         <input
@@ -165,8 +165,8 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           name="appointmentDatetime"
           value={formData.appointmentDatetime}
           onChange={handleChange}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
-            errors.appointmentDatetime ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent ${
+            errors.appointmentDatetime ? 'border-red-500' : 'border-gray-600'
           }`}
         />
         {errors.appointmentDatetime && <p className="mt-1 text-sm text-red-600">{errors.appointmentDatetime}</p>}
@@ -177,7 +177,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         
         {availableSlots.length > 0 && (
           <div className="mt-2">
-            <p className="text-sm font-medium text-gray-700 mb-1">Available Time Slots:</p>
+            <p className="text-sm font-medium text-gray-300 mb-1">Available Time Slots:</p>
             <div className="grid grid-cols-3 gap-2">
               {availableSlots.map((slot, index) => {
                 const time = new Date(slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -186,10 +186,10 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
                     key={index}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, appointmentDatetime: slot }))}
-                    className={`px-2 py-1 text-xs rounded ${
+                    className={`px-2 py-1 text-xs rounded border ${
                       formData.appointmentDatetime === slot
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200'
+                        ? 'bg-accent-600 text-white border-accent-600'
+                        : 'bg-surface-700 hover:bg-surface-600 border-gray-600 text-gray-300'
                     }`}
                   >
                     {time}
@@ -202,7 +202,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
       </div>
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">
           Notes
         </label>
         <textarea
@@ -211,7 +211,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
           value={formData.notes}
           onChange={handleChange}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         />
       </div>
 
@@ -219,13 +219,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-gray-200 bg-surface-700 border border-gray-600 rounded-md hover:bg-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-accent-600 border border-transparent rounded-md hover:bg-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           Schedule Appointment
         </button>

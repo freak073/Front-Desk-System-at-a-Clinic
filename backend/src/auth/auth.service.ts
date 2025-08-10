@@ -50,6 +50,23 @@ export class AuthService {
     };
   }
 
+  // Re-issue token directly from existing user (used by refresh endpoint guarded by JWT)
+  issueFromUser(user: User): AuthResponseDto {
+    const payload: JwtPayload = {
+      sub: user.id,
+      username: user.username,
+      role: user.role,
+    };
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      },
+    };
+  }
+
   async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     return bcrypt.hash(password, saltRounds);

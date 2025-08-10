@@ -1,0 +1,49 @@
+version: '3.9'
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: front_desk_system
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_NAME: front_desk_system
+      JWT_SECRET: change-me
+      FRONTEND_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000
+      CACHE_ENABLED: 'true'
+      CACHE_TTL: 300
+      RATE_LIMIT_TTL: 60
+      RATE_LIMIT_LIMIT: 100
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+  frontend:
+    build: ./frontend
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE: http://localhost:3001
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+volumes:
+  db_data:

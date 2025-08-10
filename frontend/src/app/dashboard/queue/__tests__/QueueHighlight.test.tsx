@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QueueManagementPage from '../page';
+// Mock react-query
+jest.mock('react-query', () => ({
+  useQuery: jest.fn(() => ({ data: { data: { data: [], meta: { total:0 } } }, isLoading:false, isError:false, isFetching:false })),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn(), setQueryData: jest.fn() }))
+}));
 
 // Deep clone utility
 const dc = <T,>(v: T): T => JSON.parse(JSON.stringify(v));

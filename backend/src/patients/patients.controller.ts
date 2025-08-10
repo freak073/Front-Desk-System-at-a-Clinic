@@ -33,6 +33,9 @@ export class PatientsController {
   @Get()
   async findAll(@Query() query: PatientQueryDto): Promise<PatientResponseDto[]> {
     const patients = await this.patientsService.findAll(query);
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[PatientsController] findAll returned ${patients.length} patients`);
+    }
     return patients.map(patient => plainToClass(PatientResponseDto, patient));
   }
 

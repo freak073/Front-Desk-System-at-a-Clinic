@@ -3,7 +3,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// Using react-query v3 (legacy package name)
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { api, ApiRequestOptions, ApiResponse } from '../../lib/apiOptimization';
 
 /**
@@ -106,19 +107,20 @@ export const useApi = <T>(
         });
 
         return response.data;
-      } catch (error) {
+      } catch (err: any) {
+        const status = err?.status || err?.response?.status;
         // Update state with error
         setState(prev => ({
           ...prev,
           loading: false,
-          error,
+            // cast to Error if possible
+          error: (err instanceof Error ? err : new Error(err?.message || 'Request failed')),
           meta: {
             ...prev.meta,
-            status: error.status || null,
+            status: status || null,
           },
         }));
-
-        throw error;
+        throw err;
       }
     },
     [url, method, options]
@@ -306,10 +308,9 @@ export const useBatchApi = <T>(
       });
 
       return responses.map(response => response.data);
-    } catch (error) {
-      // Update state with error
-      setState({ data: null, loading: false, error });
-      throw error;
+    } catch (err: any) {
+      setState({ data: null, loading: false, error: (err instanceof Error ? err : new Error(err?.message || 'Batch request failed')) });
+      throw err;
     }
   }, [requests]);
 

@@ -93,10 +93,13 @@ export const removeFromQueue = async (id: number): Promise<boolean> => {
 
 export const fetchPatients = async (): Promise<any[]> => {
   try {
-    const response = await apiService.get<any[]>('/patients');
-    return response.data || [];
+  console.debug('[queue.fetchPatients] Requesting /patients');
+  const response = await apiService.get<any[]>('/patients');
+  const data = response.data || [];
+  console.debug('[queue.fetchPatients] Received patients:', Array.isArray(data) ? data.length : 'non-array');
+  return data;
   } catch (error) {
-    console.error('Failed to fetch patients:', error);
+  console.error('[queue.fetchPatients] Failed:', error);
     return [];
   }
 };

@@ -11,6 +11,7 @@ import { Appointment } from "../entities/appointment.entity";
 import { Doctor } from "../entities/doctor.entity";
 import { Patient } from "../entities/patient.entity";
 import { CreateAppointmentDto } from "./dto/create-appointment.dto";
+import { CacheService } from "../services/cache.service";
 
 describe("AppointmentsService", () => {
   let service: AppointmentsService;
@@ -46,6 +47,12 @@ describe("AppointmentsService", () => {
     getRawMany: jest.fn(),
   };
 
+  const mockCacheService: Partial<CacheService> = {
+    generateKey: jest.fn((prefix: string) => prefix),
+    wrap: jest.fn(async (_opts: any, fn: any) => await fn()),
+    clear: jest.fn(),
+  } as any;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +69,10 @@ describe("AppointmentsService", () => {
           provide: getRepositoryToken(Patient),
           useValue: mockPatientRepository,
         },
+        {
+          provide: CacheService,
+          useValue: mockCacheService,
+        }
       ],
     }).compile();
 

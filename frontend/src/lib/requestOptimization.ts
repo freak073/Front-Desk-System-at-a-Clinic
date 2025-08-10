@@ -134,11 +134,11 @@ const dedupCache = new Map<string, DedupCacheEntry<any>>();
  */
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of dedupCache.entries()) {
+  dedupCache.forEach((entry, key) => {
     if (now - entry.timestamp > REQUEST_CONFIG.DEFAULT_DEDUP_CACHE_TIME) {
       dedupCache.delete(key);
     }
-  }
+  });
 }, REQUEST_CONFIG.DEFAULT_DEDUP_CACHE_TIME);
 
 /**

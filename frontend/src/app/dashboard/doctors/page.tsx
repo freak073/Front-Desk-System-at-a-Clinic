@@ -174,22 +174,22 @@ const DoctorManagementPage = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
+  <div className="p-4 sm:p-6 md:p-8 text-gray-200">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Doctor Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-100">Doctor Management</h1>
         <button 
           onClick={() => setShowNewDoctorModal(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          className="btn-primary"
         >
           + Add New Doctor
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
+  <div className="bg-surface-900 border border-gray-700 shadow rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-300 mb-1">
               Search
             </label>
             <input
@@ -198,19 +198,19 @@ const DoctorManagementPage = () => {
               placeholder="Search by name or specialization"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
             />
           </div>
           
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
               Status
             </label>
             <select
               id="status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
             >
               <option value="all">All Statuses</option>
               <option value="available">Available</option>
@@ -220,14 +220,14 @@ const DoctorManagementPage = () => {
           </div>
           
           <div>
-            <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="specialization" className="block text-sm font-medium text-gray-300 mb-1">
               Specialization
             </label>
             <select
               id="specialization"
               value={specializationFilter}
               onChange={(e) => setSpecializationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
             >
               <option value="all">All Specializations</option>
               {specializations.map(spec => (
@@ -237,14 +237,14 @@ const DoctorManagementPage = () => {
           </div>
           
           <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">
               Location
             </label>
             <select
               id="location"
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
             >
               <option value="all">All Locations</option>
               {locations.map(loc => (
@@ -261,7 +261,7 @@ const DoctorManagementPage = () => {
                 setSpecializationFilter('all');
                 setLocationFilter('all');
               }}
-              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
+              className="w-full px-4 py-2 bg-surface-700 text-gray-200 rounded-md hover:bg-surface-600 transition focus:outline-none focus:ring-2 focus:ring-accent-500"
             >
               Clear Filters
             </button>
@@ -367,7 +367,7 @@ const DoctorForm = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
           Name
         </label>
         <input
@@ -377,12 +377,12 @@ const DoctorForm = ({
           value={formData.name}
           onChange={handleChange}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         />
       </div>
 
       <div>
-        <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="specialization" className="block text-sm font-medium text-gray-300 mb-1">
           Specialization
         </label>
         <input
@@ -392,12 +392,12 @@ const DoctorForm = ({
           value={formData.specialization}
           onChange={handleChange}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         />
       </div>
 
       <div>
-        <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="gender" className="block text-sm font-medium text-gray-300 mb-1">
           Gender
         </label>
         <select
@@ -405,7 +405,7 @@ const DoctorForm = ({
           name="gender"
           value={formData.gender}
           onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         >
           <option value="male">Male</option>
           <option value="female">Female</option>
@@ -414,7 +414,7 @@ const DoctorForm = ({
       </div>
 
       <div>
-        <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">
           Location
         </label>
         <input
@@ -424,12 +424,12 @@ const DoctorForm = ({
           value={formData.location}
           onChange={handleChange}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         />
       </div>
 
       <div>
-        <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
           Status
         </label>
         <select
@@ -437,7 +437,7 @@ const DoctorForm = ({
           name="status"
           value={formData.status}
           onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
         >
           <option value="available">Available</option>
           <option value="busy">Busy</option>
@@ -449,13 +449,13 @@ const DoctorForm = ({
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-gray-200 bg-surface-700 border border-gray-600 rounded-md hover:bg-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 text-sm font-medium text-white bg-accent-600 border border-transparent rounded-md hover:bg-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           {initialData ? 'Update Doctor' : 'Add Doctor'}
         </button>

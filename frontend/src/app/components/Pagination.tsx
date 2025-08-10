@@ -29,19 +29,19 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, className = '' }) =
   }
 
   return (
-    <nav className={`flex items-center justify-between border-t border-gray-200 px-4 sm:px-0 py-3 ${className}`}>
+  <nav className={`flex items-center justify-between border-t border-gray-700 px-4 sm:px-0 py-3 text-gray-300 ${className}`}>
       <div className="flex flex-1 w-0 sm:hidden">
         <button
           onClick={prevPage}
           disabled={!canPrevPage}
-          className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${canPrevPage ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
+          className={`relative inline-flex items-center rounded-md border border-gray-600 bg-surface-800 px-4 py-2 text-sm font-medium ${canPrevPage ? 'text-gray-300 hover:bg-surface-700' : 'text-gray-600 cursor-not-allowed'}`}
         >
           Previous
         </button>
         <button
           onClick={nextPage}
           disabled={!canNextPage}
-          className={`ml-3 relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${canNextPage ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
+          className={`ml-3 relative inline-flex items-center rounded-md border border-gray-600 bg-surface-800 px-4 py-2 text-sm font-medium ${canNextPage ? 'text-gray-300 hover:bg-surface-700' : 'text-gray-600 cursor-not-allowed'}`}
         >
           Next
         </button>
@@ -49,7 +49,7 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, className = '' }) =
       
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-400">
             Showing page <span className="font-medium">{page}</span> of{' '}
             <span className="font-medium">{totalPages}</span>
           </p>
@@ -59,7 +59,7 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, className = '' }) =
             <button
               onClick={prevPage}
               disabled={!canPrevPage}
-              className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${canPrevPage ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
+              className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${canPrevPage ? 'text-gray-400 hover:bg-surface-700' : 'text-gray-600 cursor-not-allowed'}`}
             >
               <span className="sr-only">Previous</span>
               <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -73,10 +73,10 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, className = '' }) =
                 key={pageNum}
                 onClick={() => goToPage(pageNum)}
                 aria-current={page === pageNum ? 'page' : undefined}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium ${page === pageNum
-                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                } border`}
+                className={`relative inline-flex items-center px-4 py-2 text-sm font-medium border ${page === pageNum
+                  ? 'z-10 bg-accent-600 border-accent-500 text-white'
+                  : 'bg-surface-800 border-gray-600 text-gray-400 hover:bg-surface-700'
+                }`}
               >
                 {pageNum}
               </button>
@@ -85,7 +85,7 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, className = '' }) =
             <button
               onClick={nextPage}
               disabled={!canNextPage}
-              className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${canNextPage ? 'text-gray-400 hover:bg-gray-50' : 'text-gray-300 cursor-not-allowed'}`}
+              className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${canNextPage ? 'text-gray-400 hover:bg-surface-700' : 'text-gray-600 cursor-not-allowed'}`}
             >
               <span className="sr-only">Next</span>
               <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

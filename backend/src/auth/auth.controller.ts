@@ -10,7 +10,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, AuthResponseDto } from './dto';
+import { LoginDto, AuthResponseDto, RefreshTokenDto } from './dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -52,5 +52,20 @@ export class AuthController {
       username: user.username,
       role: user.role,
     };
+  }
+
+  // Token verification for existing session
+  @UseGuards(JwtAuthGuard)
+  @Get('verify')
+  verifyToken() {
+    return { success: true };
+  }
+
+  // Simplistic refresh: guarded endpoint re-issues token with same identity.
+  @UseGuards(JwtAuthGuard)
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@CurrentUser() user: User, @Body() _body: RefreshTokenDto): Promise<AuthResponseDto> {
+    return this.authService.issueFromUser(user);
   }
 }

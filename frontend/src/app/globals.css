@@ -8,54 +8,30 @@
   }
   
   body {
-    @apply bg-gray-900 text-gray-100;
+    @apply bg-surface-900 text-gray-100 antialiased;
   }
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 shadow-md hover:shadow-lg;
-  }
+  /* Button variants */
+  .btn-base { @apply inline-flex items-center justify-center font-medium rounded-md px-4 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 disabled:opacity-50 disabled:cursor-not-allowed; }
+  /* Using accent-600 for improved WCAG contrast with white text */
+  .btn-primary { @apply btn-base bg-accent-600 hover:bg-accent-500 text-white shadow; }
+  .btn-secondary { @apply btn-base bg-surface-700 hover:bg-surface-600 text-gray-200 shadow; }
+  .btn-danger { @apply btn-base bg-danger-600 hover:bg-danger-500 text-white; }
+  .btn-ghost { @apply btn-base bg-transparent hover:bg-surface-700 text-gray-300; }
   
-  .btn-secondary {
-    @apply bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 shadow-md hover:shadow-lg;
-  }
+  .input-field { @apply w-full px-3 py-2 rounded-md bg-surface-700 border border-gray-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent; }
   
-  .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 shadow-md hover:shadow-lg;
-  }
-  
-  .btn-warning {
-    @apply bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 shadow-md hover:shadow-lg;
-  }
-  
-  .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 shadow-md hover:shadow-lg;
-  }
-  
-  .input-field {
-    @apply w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400;
-  }
-  
-  .card {
-    @apply bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700;
-  }
+  .card { @apply bg-surface-800 border border-gray-700 rounded-lg shadow p-6; }
   
   .status-badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
   }
   
-  .status-available {
-    @apply status-badge bg-green-900 text-green-300 border border-green-700;
-  }
-  
-  .status-busy {
-    @apply status-badge bg-yellow-900 text-yellow-300 border border-yellow-700;
-  }
-  
-  .status-off-duty {
-    @apply status-badge bg-gray-700 text-gray-300 border border-gray-600;
-  }
+  .status-available { @apply status-badge bg-green-600/20 text-green-300 border border-green-700/40; }
+  .status-busy { @apply status-badge bg-yellow-600/20 text-yellow-300 border border-yellow-700/40; }
+  .status-off-duty { @apply status-badge bg-red-600/20 text-red-300 border border-red-700/40; }
   
   .priority-normal {
     @apply text-gray-400;
@@ -130,9 +106,7 @@
     @apply block;
   }
   
-  .responsive-card {
-    @apply bg-gray-800 rounded-lg shadow p-4;
-  }
+  .responsive-card { @apply bg-surface-800 rounded-lg shadow p-4 border border-gray-700; }
   
   .responsive-card-header {
     @apply flex justify-between items-center pb-2 border-b border-gray-700;
@@ -150,13 +124,9 @@
     @apply px-4 py-2 text-base rounded-md;
   }
   
-  .responsive-input {
-    @apply w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
-  }
+  .responsive-input { @apply w-full px-3 py-2 bg-surface-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500; }
   
-  .responsive-select {
-    @apply w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
-  }
+  .responsive-select { @apply w-full px-3 py-2 bg-surface-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-accent-500; }
   
   .responsive-modal {
     @apply fixed inset-0 z-50 overflow-y-auto;
@@ -170,9 +140,7 @@
     @apply flex min-h-screen items-center justify-center p-4;
   }
   
-  .responsive-modal-content {
-    @apply relative bg-gray-800 rounded-lg shadow-xl transform transition-all w-full max-w-md;
-  }
+  .responsive-modal-content { @apply relative bg-surface-800 border border-gray-700 rounded-lg shadow-xl transform transition-all w-full max-w-md; }
   
   .responsive-modal-content-lg {
     @apply max-w-2xl;

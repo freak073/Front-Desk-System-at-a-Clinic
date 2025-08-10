@@ -27,7 +27,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
+  <div className="min-h-screen flex items-center justify-center bg-surface-900 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_60%)]">
       <div className="card max-w-md w-full">
         <h1 className="text-2xl font-bold text-white mb-6 text-center">
           Login to Front Desk System

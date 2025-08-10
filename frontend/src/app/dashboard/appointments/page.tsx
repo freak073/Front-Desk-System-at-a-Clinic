@@ -10,20 +10,19 @@ import AppointmentForm from '../../components/AppointmentForm';
 import DoctorCard from '../../components/DoctorCard';
 import StatusBadge from '../../components/StatusBadge';
 import VirtualizedList from '../../components/VirtualizedList';
-import { updateAppointment } from './appointments.service';
+import { updateAppointment, fetchDoctors, fetchPatients, createAppointment, cancelAppointment, fetchDoctorById, searchAppointmentsAdvanced, updateDoctorSchedule } from './appointments.service';
 import { useAppointmentUpdates } from '../../hooks/useRealTimeUpdates';
 import { useQueryClient } from 'react-query';
 import { logMetric } from '../../../lib/metrics';
 import PaginationControls from '../../components/PaginationControls';
-import { fetchDoctors, fetchPatients, createAppointment, cancelAppointment, fetchDoctorById, searchAppointmentsAdvanced, updateDoctorSchedule } from './appointments.service';
-import { apiService } from '../../../lib/api';
+// removed duplicate import & unused apiService
 import { Doctor, Patient, CreateAppointmentDto, Appointment } from '../../../types';
 import { highlightMatch } from '../../components/highlight';
 import FilterBar from '../../components/FilterBar';
 import DoctorScheduleForm from '../../components/DoctorScheduleForm';
 
 const AppointmentsPage = () => {
-  useAuth(); // ensure auth context utilized without unused variable
+  const { user, loading: authLoading } = useAuth(); // ensure auth context utilized
   React.useEffect(()=>{ const start = performance.now(); return () => { logMetric({ name:'appointments_page_time', duration: performance.now()-start, timestamp: Date.now() }); }; }, []);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -55,7 +54,7 @@ const AppointmentsPage = () => {
   const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
   const [showDoctorScheduleModal, setShowDoctorScheduleModal] = useState(false);
   const [doctorScheduleDirty, setDoctorScheduleDirty] = useState(false);
-  const [rescheduleAppointment, setRescheduleAppointment] = useState<any | null>(null);
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
   const [detailAppointment, setDetailAppointment] = useState<Appointment | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -95,22 +94,35 @@ const AppointmentsPage = () => {
     searchAppointmentsDebounced();
   }, [debouncedSearchTerm, statusFilter, doctorFilter, dateFilter]);
 
-  // Fetch doctors and patients
+  // Fetch doctors and patients after auth ready
   React.useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
     const load = async () => {
       try {
         const [doctorsData, patientsData] = await Promise.all([
           fetchDoctors(),
           fetchPatients()
         ]);
+        if (cancelled) return;
         setDoctors(doctorsData);
         setPatients(patientsData);
+        console.debug('[AppointmentsPage] doctors:', doctorsData.length, 'patients:', patientsData.length);
+        if (patientsData.length === 0) {
+          setTimeout(async () => {
+            if (cancelled) return;
+            const retryPatients = await fetchPatients();
+            console.debug('[AppointmentsPage] patients retry length:', retryPatients.length);
+            if (retryPatients.length) setPatients(retryPatients);
+          }, 600);
+        }
       } catch (err) {
-        console.error('Error fetching data:', err);
+        if (!cancelled) console.error('[AppointmentsPage] Error fetching doctors/patients:', err);
       }
     };
     load();
-  }, []);
+    return () => { cancelled = true; };
+  }, [authLoading, user]);
 
   // Filter appointments based on search and filters
   const sourceAppointments = searchResults ?? localAppointments;
@@ -174,25 +186,37 @@ const AppointmentsPage = () => {
     console.log('Delete doctor:', doctorId);
   };
 
-  if (isLoading) {
+  const applyAppointmentStatus = async (appointmentId: number, newStatus: Appointment['status'], currentStatus: Appointment['status']) => {
+    setLocalAppointments(list => list.map(a => a.id === appointmentId ? { ...a, status: newStatus } : a));
+    try {
+      await updateAppointment(appointmentId, { status: newStatus });
+      queryClient.invalidateQueries('appointments');
+    } catch (err) {
+      console.error('[AppointmentsPage] status update failed', err);
+      setLocalAppointments(list => list.map(a => a.id === appointmentId ? { ...a, status: currentStatus } : a));
+    }
+  };
+
+  if (isLoading || authLoading) {
     return (
       <div className="p-8">
         <div className="grid gap-4">
-          {Array.from({length:8}).map((_,i)=>(
-            <div key={i} className="h-20 bg-gray-100 animate-pulse rounded" />
-          ))}
+          {[...Array(8)].map((_,i)=>{
+            const key = `appt-skel-${i}`; // stable within render, acceptable for static skeletons
+            return <div key={key} className="h-20 bg-gray-100 animate-pulse rounded" />;
+          })}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
+  <div className="p-4 sm:p-6 md:p-8 text-gray-200">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Appointments Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-100">Appointments Management</h1>
         <button 
           onClick={() => setShowNewAppointmentModal(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          className="btn-primary"
         >
           + New Appointment
         </button>
@@ -215,37 +239,29 @@ const AppointmentsPage = () => {
         onClear={() => { setSearchTerm(''); setStatusFilter('all'); setDoctorFilter('all'); setDateFilter(''); }}
       >
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">Date</label>
           <input
             type="date"
             id="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
           />
         </div>
       </FilterBar>
 
       {/* View Toggle */}
       <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-2">
+    <div className="flex space-x-2">
           <button
             onClick={() => setViewMode('list')}
-            className={`px-4 py-2 rounded-md ${
-              viewMode === 'list' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+      className={`px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 ${viewMode === 'list' ? 'bg-accent-600 text-white hover:bg-accent-500' : 'bg-surface-700 text-gray-300 hover:bg-surface-600'}`}
           >
             List View
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-4 py-2 rounded-md ${
-              viewMode === 'calendar' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+      className={`px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 ${viewMode === 'calendar' ? 'bg-accent-600 text-white hover:bg-accent-500' : 'bg-surface-700 text-gray-300 hover:bg-surface-600'}`}
           >
             Calendar View
           </button>
@@ -254,32 +270,32 @@ const AppointmentsPage = () => {
 
       {/* Appointments List */}
   {viewMode === 'list' ? (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
+    <div className="bg-surface-900 border border-gray-700 shadow rounded-lg overflow-hidden">
           <div className="responsive-table">
-    <table className="min-w-full divide-y divide-gray-200" role="table" aria-label="Appointments table">
-              <thead className="bg-gray-50">
+  <table className="min-w-full divide-y divide-gray-800" role="table" aria-label="Appointments table">
+        <thead className="bg-surface-800">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Patient
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell mobile-hidden">
+          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider md:table-cell mobile-hidden">
                     Doctor
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Date & Time
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-surface-900 divide-y divide-gray-800">
                 {filteredAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+          <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                       {searchTerm || statusFilter !== 'all' || dateFilter
                         ? 'No appointments match your search criteria'
                         : 'No appointments found'}
@@ -292,28 +308,28 @@ const AppointmentsPage = () => {
                     height={Math.min(600, filteredAppointments.length * 72)}
                     className="divide-y divide-gray-200"
                     renderItem={(appointment: any) => (
-                    <tr key={appointment.id} className="hover:bg-gray-50">
+          <tr key={appointment.id} className="hover:bg-surface-800">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+            <div className="text-sm font-medium text-gray-200">
                           {highlightMatch(appointment.patient?.name || 'N/A', debouncedSearchTerm)}
                         </div>
-                        <div className="sm:hidden text-xs text-gray-500">
+            <div className="sm:hidden text-xs text-gray-500">
                           {highlightMatch(appointment.doctor?.name || 'N/A', debouncedSearchTerm)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap mobile-hidden">
-                        <div className="text-sm text-gray-900">
+            <div className="text-sm text-gray-200">
                           {highlightMatch(appointment.doctor?.name || 'N/A', debouncedSearchTerm)}
                         </div>
-                        <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500">
                           {appointment.doctor?.specialization || ''}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+            <div className="text-sm text-gray-200">
                           {new Date(appointment.appointmentDatetime).toLocaleDateString()}
                         </div>
-                        <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500">
                           {new Date(appointment.appointmentDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
@@ -326,20 +342,8 @@ const AppointmentsPage = () => {
                             aria-label={`Change status for appointment ${appointment.id}`}
                             data-testid={`appointment-status-select-${appointment.id}`}
                             value={appointment.status}
-                            onChange={async (e)=>{
-                              const newStatus = e.target.value as 'booked' | 'completed' | 'canceled';
-                              const prev = appointment.status;
-                              // optimistic UI via state update
-                              setLocalAppointments(prevList => prevList.map(a => a.id === appointment.id ? { ...a, status: newStatus } : a));
-                              try {
-                                await updateAppointment(appointment.id, { status: newStatus });
-                                queryClient.invalidateQueries('appointments');
-                              } catch {
-                                // revert on error
-                                setLocalAppointments(prevList => prevList.map(a => a.id === appointment.id ? { ...a, status: prev } : a));
-                              }
-                            }}
-                            className="text-xs border-gray-300 rounded"
+                            onChange={(e)=> applyAppointmentStatus(appointment.id, e.target.value as Appointment['status'], appointment.status)}
+                            className="text-xs border-gray-600 bg-surface-800 text-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-accent-500"
                           >
                             <option value="booked">Booked</option>
                             <option value="completed">Completed</option>
@@ -351,13 +355,13 @@ const AppointmentsPage = () => {
                         <div className="flex gap-3">
                           <button
                             onClick={() => setDetailAppointment(appointment)}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="text-gray-400 hover:text-gray-200"
                           >
                             Details
                           </button>
                           <button
                             onClick={() => setRescheduleAppointment(appointment)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-accent-400 hover:text-accent-300"
                             disabled={appointment.status !== 'booked'}
                           >
       {/* Appointment Detail Modal */}
@@ -432,7 +436,7 @@ const AppointmentsPage = () => {
                           <button
                             onClick={() => handleCancelAppointment(appointment.id)}
                             disabled={appointment.status === 'canceled' || appointment.status === 'completed'}
-                            className={`text-red-600 hover:text-red-900 ${
+                            className={`text-red-400 hover:text-red-300 ${
                               (appointment.status === 'canceled' || appointment.status === 'completed')
                                 ? 'opacity-50 cursor-not-allowed'
                                 : ''
@@ -466,7 +470,7 @@ const AppointmentsPage = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg p-4">
+  <div className="bg-surface-900 border border-gray-700 shadow rounded-lg p-4">
           <MonthlyCalendar
             appointments={filteredAppointments}
             month={new Date().getMonth()}
@@ -486,7 +490,7 @@ const AppointmentsPage = () => {
 
       {/* Available Doctors Section */}
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Available Doctors</h2>
+  <h2 className="text-xl font-semibold mb-4 text-gray-100">Available Doctors</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {doctors.filter(d => d.status === 'available').map(doctor => (
             <DoctorCard

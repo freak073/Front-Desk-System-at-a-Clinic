@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react';
 import DashboardPage from '../dashboard/page';
 import NavigationTabs from '../components/NavigationTabs';
 import { useAuth } from '../../context/AuthContext';
+// Mock react-query to avoid provider
+jest.mock('react-query', () => ({
+  useQuery: jest.fn(() => ({ data: { data: { queueCount:5, todayAppointments:12, availableDoctors:3, averageWaitTime:15 } }, isLoading:false, isError:false, isFetching:false })),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn(), setQueryData: jest.fn() }))
+}));
 
 // Mock the useAuth hook
 jest.mock('../../context/AuthContext', () => ({

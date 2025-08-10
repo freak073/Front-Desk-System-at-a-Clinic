@@ -134,18 +134,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
         <dialog
           ref={modalRef}
           open
-          className={`relative bg-white rounded-lg shadow-xl transform transition-all w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto focus:outline-none`}
+          className={`relative bg-surface-800 border border-gray-700 rounded-lg shadow-xl transform transition-all w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto focus:outline-none`}
           aria-labelledby="modal-title"
           {...(describedById ? { 'aria-describedby': describedById } : {})}
         >
           {/* Modal header */}
           <div className="flex items-center justify-between p-4 border-b rounded-t">
-            <h3 id="modal-title" className="text-xl font-semibold text-gray-900">
+            <h3 id="modal-title" className="text-xl font-semibold text-gray-100">
               {title}
             </h3>
             <button
               type="button"
-              className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center"
+              className="text-gray-400 bg-transparent hover:bg-surface-700 hover:text-gray-100 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center focus:outline-none focus:ring-2 focus:ring-accent-500"
               onClick={attemptClose}
               aria-label="Close"
             >

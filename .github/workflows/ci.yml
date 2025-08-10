@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: front_desk_system
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Install Backend Deps
+        working-directory: backend
+        run: npm ci
+      - name: Backend Tests
+        working-directory: backend
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          DB_NAME: front_desk_system
+          JWT_SECRET: testsecret
+        run: npm test -- --runInBand
+      - name: Install Frontend Deps
+        working-directory: frontend
+        run: npm ci
+      - name: Frontend Tests
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_BASE: http://localhost:3001
+        run: npm test -- --runInBand
+      - name: Build Docker Images
+        run: |
+          docker build -t clinic-backend:ci ./backend
+          docker build -t clinic-frontend:ci ./frontend

@@ -2,13 +2,14 @@
  * Controller for monitoring and health checks
  */
 
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query, InternalServerErrorException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ErrorMonitoringService, ErrorSeverity } from '../services/error-monitoring.service';
 import { CacheService } from '../services/cache.service';
+import { DataSource } from 'typeorm';
 
 /**
  * Controller for monitoring and health checks
@@ -19,6 +20,7 @@ export class MonitoringController {
   constructor(
     private readonly errorMonitoringService: ErrorMonitoringService,
     private readonly cacheService: CacheService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -44,6 +46,23 @@ export class MonitoringController {
       version: process.env.npm_package_version || 'unknown',
       environment: process.env.NODE_ENV || 'development',
     };
+  }
+
+  /**
+   * Readiness probe (light DB connectivity check)
+   */
+  @Get('ready')
+  @ApiOperation({ summary: 'Readiness probe' })
+  @ApiResponse({ status: 200, description: 'Service ready' })
+  @ApiResponse({ status: 500, description: 'Not ready' })
+  async getReady() {
+    try {
+      // Lightweight query to confirm DB connectivity
+      await this.dataSource.query('SELECT 1');
+      return { status: 'ready', timestamp: new Date().toISOString() };
+    } catch (err) {
+      throw new InternalServerErrorException('Not ready');
+    }
   }
 
   /**

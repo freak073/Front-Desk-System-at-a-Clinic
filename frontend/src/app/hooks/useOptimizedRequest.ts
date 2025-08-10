@@ -287,8 +287,8 @@ export function useConcurrentRequests<T extends Record<string, (params: any) => 
   // Initialize optimized fetch functions
   if (Object.keys(optimizedFetchFns.current).length === 0) {
     for (const key in fetchFns) {
-      const fetchFn = fetchFns[key];
-      let optimizedFn = fetchFn;
+      const fetchFn = fetchFns[key] as (params: any) => Promise<any>;
+      let optimizedFn: (params: any) => Promise<any> = fetchFn;
 
       // Wrap with performance tracking if enabled
       if (trackPerformance) {
@@ -304,7 +304,7 @@ export function useConcurrentRequests<T extends Record<string, (params: any) => 
         });
       }
 
-      optimizedFetchFns.current[key] = optimizedFn;
+  optimizedFetchFns.current[key] = optimizedFn as any;
     }
   }
 

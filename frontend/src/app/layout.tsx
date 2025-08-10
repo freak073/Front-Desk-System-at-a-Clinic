@@ -1,28 +1,17 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Providers from './providers';
+import AppShell from './AppShell';
 
 export const metadata: Metadata = {
   title: 'Front Desk System',
   description: 'Clinic Front Desk Management System',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  // Import AuthProvider here to wrap the app
-  const AuthProvider = require('../context/AuthContext').AuthProvider;
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="bg-gray-900 min-h-screen text-gray-100">
-        <Providers>
-          <AuthProvider>
-            <div className="pb-16">{children}</div>
-            {typeof window !== 'undefined' && require('./components/MobileNav').default({})}
-          </AuthProvider>
-        </Providers>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

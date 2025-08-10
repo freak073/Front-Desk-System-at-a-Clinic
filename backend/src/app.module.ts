@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
@@ -32,6 +33,12 @@ import { GlobalExceptionFilter } from './filters/global-exception.filter';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: parseInt(process.env.RATE_LIMIT_TTL || '60', 10),
+        limit: parseInt(process.env.RATE_LIMIT_LIMIT || '100', 10),
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -85,6 +92,11 @@ import { GlobalExceptionFilter } from './filters/global-exception.filter';
     {
       provide: APP_INTERCEPTOR,
       useClass: DataTransformInterceptor,
+    }
+    ,
+    {
+      provide: 'APP_GUARD',
+      useClass: ThrottlerGuard,
     }
   ],
 })

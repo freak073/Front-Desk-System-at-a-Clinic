@@ -57,8 +57,10 @@ export class PerformanceMiddleware implements NestMiddleware {
       const [seconds, nanoseconds] = process.hrtime(startTime);
       const responseTimeMs = seconds * 1000 + nanoseconds / 1000000;
 
-      // Add response time header
-      res.setHeader('X-Response-Time', `${responseTimeMs.toFixed(2)}ms`);
+      // Add response time header safely (if not already sent)
+      if (!res.headersSent) {
+        res.setHeader('X-Response-Time', `${responseTimeMs.toFixed(2)}ms`);
+      }
 
       // Log slow requests
       if (responseTimeMs > PERFORMANCE_CONFIG.VERY_SLOW_REQUEST_THRESHOLD) {
@@ -125,6 +127,11 @@ export class ResponseCacheMiddleware implements NestMiddleware {
       return next();
     }
 
+    // Skip caching for any request carrying Authorization header (avoid leaking protected data)
+    if (req.headers.authorization) {
+      return next();
+    }
+
     // Generate cache key from URL and query parameters
     const cacheKey = this.generateCacheKey(req);
 
@@ -179,7 +186,8 @@ export class ResponseCacheMiddleware implements NestMiddleware {
    * @returns Cache key
    */
   private generateCacheKey(req: Request): string {
-    return `${req.method}:${req.originalUrl}:${JSON.stringify(req.query)}`;
+  const authMarker = req.headers.authorization ? 'auth' : 'anon';
+  return `${req.method}:${authMarker}:${req.originalUrl}:${JSON.stringify(req.query)}`;
   }
 
   /**

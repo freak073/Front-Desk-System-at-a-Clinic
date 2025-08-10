@@ -39,23 +39,25 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     error: (m, ttl) => show(m, 'error', ttl),
     info: (m, ttl) => show(m, 'info', ttl)
   }), [show]);
+  // Avoid SSR document access
+  const canPortal = typeof document !== 'undefined' && !!document.body;
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {createPortal(
-        <section className="fixed top-4 right-4 z-50 space-y-2 w-80" aria-label="Notifications">
+      {canPortal && createPortal(
+  <section className="fixed top-4 right-4 z-50 space-y-2 w-80" aria-label="Notifications">
           {toasts.map(t => {
-            let borderClass = 'border-blue-300';
-            if (t.type === 'success') borderClass = 'border-green-300';
-            else if (t.type === 'error') borderClass = 'border-red-300';
-            let dotClass = 'bg-blue-500';
-            if (t.type === 'success') dotClass = 'bg-green-500';
-            else if (t.type === 'error') dotClass = 'bg-red-500';
+            let borderClass = 'border-blue-500/40';
+            if (t.type === 'success') borderClass = 'border-green-500/40';
+            else if (t.type === 'error') borderClass = 'border-red-500/40';
+            let dotClass = 'bg-blue-400';
+            if (t.type === 'success') dotClass = 'bg-green-400';
+            else if (t.type === 'error') dotClass = 'bg-red-400';
             return (
-              <div key={t.id} className={`flex items-start gap-2 p-3 rounded shadow text-sm animate-fade-in border bg-white ${borderClass}`}> 
+              <div key={t.id} className={`flex items-start gap-2 p-3 rounded shadow text-sm animate-fade-in border bg-surface-800 text-gray-100 ${borderClass}`}> 
                 <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${dotClass}`} />
                 <div className="flex-1">{t.message}</div>
-                <button onClick={() => remove(t.id)} aria-label="Dismiss notification" className="text-gray-400 hover:text-gray-600">×</button>
+                <button onClick={() => remove(t.id)} aria-label="Dismiss notification" className="text-gray-400 hover:text-gray-200">×</button>
               </div>
             );
           })}

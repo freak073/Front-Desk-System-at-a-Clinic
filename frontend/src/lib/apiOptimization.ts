@@ -36,8 +36,8 @@ export interface ApiRequestOptions extends RequestInit {
   retryAttempts?: number;
   /** Retry delay in milliseconds */
   retryDelay?: number;
-  /** Enable request caching */
-  cache?: boolean;
+  /** Enable in-memory response caching (separate from fetch RequestInit.cache) */
+  cacheEnabled?: boolean;
   /** Cache TTL in milliseconds */
   cacheTtl?: number;
   /** Request ID for batching */
@@ -122,7 +122,7 @@ export const apiRequest = async <T>(
   // Start performance tracking
   const apiName = `${options.method || 'GET'} ${url.split('?')[0]}`;
   const trackingEnabled = !options.skipPerformanceTracking;
-  const trackingId = trackingEnabled ? measureApiCall(apiName, 'start') : null;
+  const trackingStart = trackingEnabled ? (typeof performance !== 'undefined' ? performance.now() : Date.now()) : 0;
 
   try {
     // Apply default options
@@ -132,20 +132,19 @@ export const apiRequest = async <T>(
       timeout: options.timeout || API_CONFIG.defaultTimeout,
       retryAttempts: options.retryAttempts || API_CONFIG.defaultRetryAttempts,
       retryDelay: options.retryDelay || API_CONFIG.defaultRetryDelay,
-      cache: options.cache !== undefined ? options.cache : (options.method || 'GET') === 'GET',
+      cacheEnabled: options.cacheEnabled !== undefined ? options.cacheEnabled : (options.method || 'GET') === 'GET',
       cacheTtl: options.cacheTtl || API_CONFIG.defaultCacheTtl,
     };
 
     // Check cache for GET requests
-    if (fullOptions.cache && (fullOptions.method || 'GET') === 'GET') {
+  if (fullOptions.cacheEnabled && (fullOptions.method || 'GET') === 'GET') {
       const cacheKey = generateCacheKey(fullUrl, fullOptions);
       const cachedResponse = apiCache.get(cacheKey);
 
       if (cachedResponse && isCacheValid(cachedResponse)) {
         // End performance tracking for cached response
-        if (trackingId) {
-          measureApiCall(apiName, 'end', trackingId, { fromCache: true });
-        }
+  // For cached responses we can optionally log via a zero-duration measurement
+  // Using measureApiCall here would invoke the callback immediately; instead we no-op.
 
         return {
           data: cachedResponse.data,
@@ -198,7 +197,7 @@ export const apiRequest = async <T>(
 
     // Cache successful GET responses
     if (
-      fullOptions.cache &&
+      fullOptions.cacheEnabled &&
       (fullOptions.method || 'GET') === 'GET' &&
       response.status >= 200 &&
       response.status < 300
@@ -212,11 +211,13 @@ export const apiRequest = async <T>(
     }
 
     // End performance tracking
-    if (trackingId) {
-      measureApiCall(apiName, 'end', trackingId, {
-        status: response.status,
-        duration,
-      });
+    // Manual performance logging (avoid misuse of measureApiCall start/end pattern)
+    if (trackingEnabled) {
+      /* eslint-disable no-console */
+      if (duration > 500) {
+        console.warn(`Slow API call: ${apiName} (${duration.toFixed(1)}ms)`);
+      }
+      /* eslint-enable no-console */
     }
 
     return {
@@ -226,12 +227,14 @@ export const apiRequest = async <T>(
         duration,
       },
     };
-  } catch (error) {
-    // End performance tracking with error
-    if (trackingId) {
-      measureApiCall(apiName, 'end', trackingId, { error: error.message });
+  } catch (err: any) {
+    if (trackingEnabled) {
+      const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - trackingStart;
+      /* eslint-disable no-console */
+      console.warn(`Failed API call: ${apiName} (${duration.toFixed(1)}ms)`);
+      /* eslint-enable no-console */
     }
-    throw error;
+    throw err;
   }
 };
 
@@ -260,16 +263,16 @@ const makeRequestWithRetry = async <T>(
           retryCount,
         },
       };
-    } catch (error) {
-      lastError = error;
+    } catch (error: any) {
+      lastError = (error instanceof Error ? error : new Error(error?.message || 'Request failed'));
 
       // Don't retry if it's a client error (4xx)
-      if (error.status >= 400 && error.status < 500) {
+  if (error?.status >= 400 && error?.status < 500) {
         throw error;
       }
 
       // Don't retry if we've reached the maximum attempts
-      if (retryCount >= options.retryAttempts!) {
+  if (retryCount >= options.retryAttempts!) {
         throw error;
       }
 
@@ -316,7 +319,7 @@ const makeRequestWithTimeout = async <T>(
     // Check if response is ok
     if (!response.ok) {
       const error: any = new Error(
-        responseData.message || `API error: ${response.status}`
+  (responseData as any)?.message || `API error: ${response.status}`
       );
       error.status = response.status;
       error.data = responseData;
@@ -337,7 +340,8 @@ const makeRequestWithTimeout = async <T>(
     };
   } catch (error) {
     // Handle timeout
-    if (error.name === 'AbortError') {
+  const anyErr = error as any;
+  if (anyErr?.name === 'AbortError') {
       const timeoutError: any = new Error(`Request timeout after ${options.timeout}ms`);
       timeoutError.status = 408; // Request Timeout
       throw timeoutError;
@@ -421,11 +425,9 @@ export const clearApiCache = (urlPattern?: string | RegExp) => {
   const pattern = urlPattern instanceof RegExp ? urlPattern : new RegExp(urlPattern);
   
   // Clear matching cache entries
-  for (const key of apiCache.keys()) {
-    if (pattern.test(key)) {
-      apiCache.delete(key);
-    }
-  }
+  apiCache.forEach((_, key) => {
+    if (pattern.test(key)) apiCache.delete(key);
+  });
 };
 
 /**
@@ -433,23 +435,15 @@ export const clearApiCache = (urlPattern?: string | RegExp) => {
  * @returns Cache statistics
  */
 export const getApiCacheStats = () => {
-  const now = Date.now();
   let validEntries = 0;
   let expiredEntries = 0;
   let totalSize = 0;
-
-  for (const [key, entry] of apiCache.entries()) {
-    if (isCacheValid(entry)) {
-      validEntries++;
-    } else {
-      expiredEntries++;
-    }
-
-    // Estimate size in bytes (rough approximation)
-    totalSize += key.length * 2; // Key size (2 bytes per character)
-    totalSize += JSON.stringify(entry.data).length * 2; // Data size
-    totalSize += 16; // Timestamp and TTL (8 bytes each)
-  }
+  apiCache.forEach((entry, key) => {
+    if (isCacheValid(entry)) validEntries++; else expiredEntries++;
+    totalSize += key.length * 2; // key size
+    try { totalSize += JSON.stringify(entry.data).length * 2; } catch { /* ignore */ }
+    totalSize += 16; // timestamp + ttl
+  });
 
   return {
     totalEntries: apiCache.size,

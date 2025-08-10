@@ -32,13 +32,13 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4" aria-label="Pagination navigation">
       <div className="flex items-center gap-2">
         <button
-          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-700 border-gray-600 bg-surface-800 text-gray-300"
           onClick={() => canPrev && onPageChange(1)}
           disabled={!canPrev}
           aria-label="First page"
         >«</button>
         <button
-          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-700 border-gray-600 bg-surface-800 text-gray-300"
           onClick={() => canPrev && onPageChange(page - 1)}
           disabled={!canPrev}
           aria-label="Previous page"
@@ -48,23 +48,23 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
             key={p}
             onClick={() => onPageChange(p)}
             aria-current={p === page ? 'page' : undefined}
-            className={`px-3 py-1.5 rounded border text-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${p === page ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-600' : 'bg-white'}`}
+            className={`px-3 py-1.5 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 border-gray-600 ${p === page ? 'bg-accent-600 text-white border-accent-600 hover:bg-accent-500' : 'bg-surface-800 text-gray-300 hover:bg-surface-700'}`}
           >{p}</button>
         ))}
         <button
-          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-700 border-gray-600 bg-surface-800 text-gray-300"
           onClick={() => canNext && onPageChange(page + 1)}
           disabled={!canNext}
           aria-label="Next page"
         >›</button>
         <button
-          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
+          className="px-3 py-1.5 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-700 border-gray-600 bg-surface-800 text-gray-300"
           onClick={() => canNext && onPageChange(totalPages)}
           disabled={!canNext}
           aria-label="Last page"
         >»</button>
       </div>
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+  <div className="flex items-center gap-2 text-sm text-gray-400">
         <span>Page {page} of {totalPages}</span>
         <span className="hidden sm:inline">•</span>
         <span>{total} total</span>
@@ -72,7 +72,7 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
           <label className="flex items-center gap-1">
             <span className="sr-only">Rows per page</span>
             <select
-              className="border rounded px-2 py-1 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border rounded px-2 py-1 bg-surface-800 text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent-500 border-gray-600"
               value={pageSize}
               aria-label="Rows per page"
               onChange={e => onPageSizeChange(Number(e.target.value))}

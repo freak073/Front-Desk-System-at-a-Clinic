@@ -88,22 +88,36 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 // Generic API methods
+// Helper to normalize responses (backend currently returns raw arrays/objects, not enveloped)
+function normalizeResponse<T>(raw: any): ApiResponse<T> {
+  // If already in expected ApiResponse shape (has success flag)
+  if (raw && typeof raw === 'object' && 'success' in raw) {
+    return raw as ApiResponse<T>;
+  }
+  // If looks like envelope with data but no success property
+  if (raw && typeof raw === 'object' && 'data' in raw && !Array.isArray(raw)) {
+    return { success: true, ...(raw as object) } as ApiResponse<T>;
+  }
+  // Otherwise wrap raw payload (array, object, primitive) into data
+  return { success: true, data: raw as T };
+}
+
 export const apiService = {
   get: <T>(url: string, params?: any): Promise<ApiResponse<T>> =>
-    api.get(url, { params }).then(res => res.data),
+    api.get(url, { params }).then(res => normalizeResponse<T>(res.data)),
     
   post: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
     api.post(url, data).then(res => {
-      console.log('API Response:', res);
-      return res.data;
+      console.log('API POST Response:', res.config.url, res.status);
+      return normalizeResponse<T>(res.data);
     }),
     
   put: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
-    api.put(url, data).then(res => res.data),
+    api.put(url, data).then(res => normalizeResponse<T>(res.data)),
   
   patch: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
-    api.patch(url, data).then(res => res.data),
+    api.patch(url, data).then(res => normalizeResponse<T>(res.data)),
     
   delete: <T>(url: string): Promise<ApiResponse<T>> =>
-    api.delete(url).then(res => res.data),
+    api.delete(url).then(res => normalizeResponse<T>(res.data)),
 };

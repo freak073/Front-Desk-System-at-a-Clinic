@@ -247,10 +247,13 @@ export const deleteDoctor = async (id: number): Promise<boolean> => {
 
 export const fetchPatients = async (): Promise<Patient[]> => {
   try {
-    const response = await apiService.get<Patient[]>('/patients');
-    return response.data || [];
+  console.debug('[fetchPatients] Requesting /patients');
+  const response = await apiService.get<Patient[]>('/patients');
+  const data = response.data || [];
+  console.debug('[fetchPatients] Received patients:', Array.isArray(data) ? data.length : 'non-array');
+  return data;
   } catch (error) {
-    console.error('Failed to fetch patients:', error);
+  console.error('[fetchPatients] Failed:', error);
     return [];
   }
 };

@@ -58,7 +58,7 @@ const MonthlyCalendar: React.FC<Props> = ({
 
   const cells: React.ReactNode[] = [];
   for (let i = 0; i < leadingBlanks; i++) {
-    cells.push(<td key={'blank-' + i} className="h-28 border rounded bg-gray-50" />);
+  cells.push(<td key={'blank-' + i} className="h-28 border border-gray-700 rounded bg-surface-800" />);
   }
 
   for (let day = 1; day <= dim; day++) {
@@ -70,7 +70,7 @@ const MonthlyCalendar: React.FC<Props> = ({
       <td key={dateKey} className="relative align-top p-0">
         <button
           type="button"
-          className="h-28 border rounded p-1 flex flex-col text-xs group focus:outline-none focus:ring-2 focus:ring-blue-500 text-left w-full"
+          className="h-28 border border-gray-700 rounded p-1 flex flex-col text-xs group focus:outline-none focus:ring-2 focus:ring-accent-500 text-left w-full bg-surface-800 hover:bg-surface-700"
           aria-label={`Day ${day} with ${appts.length} appointments`}
           tabIndex={focusDay === day || (focusDay === null && day === 1) ? 0 : -1}
           onFocus={()=> setFocusDay(day)}
@@ -100,7 +100,7 @@ const MonthlyCalendar: React.FC<Props> = ({
             }
           }}
         >
-          <div className="text-[11px] font-medium mb-1">{day}</div>
+          <div className="text-[11px] font-medium mb-1 text-gray-300">{day}</div>
           <div className="space-y-0.5 overflow-hidden">
             {appts.slice(0, 3).map((a) => {
               const timeLabel = new Date(a.appointmentDatetime).toLocaleTimeString([], {
@@ -112,8 +112,8 @@ const MonthlyCalendar: React.FC<Props> = ({
                   key={a.id}
                   className={`block w-full text-left truncate rounded px-1 py-0.5 border ${
                     a.status === 'canceled'
-                      ? 'bg-red-50 border-red-200'
-                      : 'bg-blue-50 border-blue-200'
+                      ? 'bg-red-900/30 border-red-600/40 text-red-200'
+                      : 'bg-accent-600/20 border-accent-500/40 text-accent-200'
                   }`}
                   aria-label={`Appointment at ${timeLabel} for ${a.patient?.name || 'Patient'}`}
                 >
@@ -130,13 +130,13 @@ const MonthlyCalendar: React.FC<Props> = ({
         </button>
 
         {isActive && appts.length > 1 && (
-          <div className="absolute z-20 top-full left-0 mt-1 w-56 bg-white shadow-lg border rounded p-2 text-xs" aria-label={`Appointments for day ${day}`}>
+          <div className="absolute z-20 top-full left-0 mt-1 w-56 bg-surface-900 shadow-lg border border-gray-700 rounded p-2 text-xs" aria-label={`Appointments for day ${day}`}>
             <ul className="space-y-1 max-h-48 overflow-y-auto" aria-label="Appointment list for selected day">
               {appts.map((a) => {
                 const timeLabel = new Date(a.appointmentDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 return (
                   <li key={a.id}>
-                    <button type="button" onClick={() => onSelectAppointment?.(a)} className="w-full text-left hover:underline" aria-label={`Select appointment at ${timeLabel} for ${a.patient?.name || 'Patient'}`}> {timeLabel} – {a.patient?.name || 'Patient'} ({a.status})</button>
+                    <button type="button" onClick={() => onSelectAppointment?.(a)} className="w-full text-left hover:underline text-gray-200" aria-label={`Select appointment at ${timeLabel} for ${a.patient?.name || 'Patient'}`}> {timeLabel} – {a.patient?.name || 'Patient'} ({a.status})</button>
                   </li>
                 );
               })}
@@ -159,7 +159,7 @@ const MonthlyCalendar: React.FC<Props> = ({
         <button
           type="button"
           aria-label="Previous month"
-          className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
+          className="px-2 py-1 text-xs bg-surface-700 rounded hover:bg-surface-600 text-gray-200"
           onClick={() => {
             const newMonth = month - 1 < 0 ? 11 : month - 1;
             const newYear = month - 1 < 0 ? year - 1 : year;
@@ -169,13 +169,13 @@ const MonthlyCalendar: React.FC<Props> = ({
         >
           ◀
         </button>
-        <div className="text-sm font-medium" aria-label="Current month label">
+  <div className="text-sm font-medium text-gray-200" aria-label="Current month label">
           {new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
         </div>
         <button
           type="button"
           aria-label="Next month"
-          className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200"
+          className="px-2 py-1 text-xs bg-surface-700 rounded hover:bg-surface-600 text-gray-200"
           onClick={() => {
             const newMonth = month + 1 > 11 ? 0 : month + 1;
             const newYear = month + 1 > 11 ? year + 1 : year;
@@ -189,7 +189,7 @@ const MonthlyCalendar: React.FC<Props> = ({
       <table className="w-full border-collapse" aria-label="Calendar dates">
         <thead>
           <tr>
-            {dayNames.map(d => <th key={d} scope="col" className="text-center text-xs font-semibold uppercase tracking-wide text-gray-600 p-1">{d}</th>)}
+            {dayNames.map(d => <th key={d} scope="col" className="text-center text-xs font-semibold uppercase tracking-wide text-gray-400 p-1">{d}</th>)}
           </tr>
         </thead>
         <tbody>

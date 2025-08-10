@@ -36,7 +36,8 @@ describe('useRealTimeUpdates', () => {
       useRealTimeUpdates('test-key', '/test-endpoint')
     );
     
-    expect(result.current.data).toEqual(mockData.data);
+  // Hook returns full object as data
+  expect(result.current.data).toEqual(mockData);
     expect(result.current.lastUpdated).toBeDefined();
     expect(result.current.isPolling).toBeDefined();
   });

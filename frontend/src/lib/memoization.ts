@@ -54,12 +54,12 @@ export function memoizeWithMaxSize<T extends (...args: any[]) => any>(
       let oldestKey = '';
       let oldestTime = Infinity;
 
-      for (const [k, time] of keyTimestamps.entries()) {
+      keyTimestamps.forEach((time, k) => {
         if (time < oldestTime) {
           oldestTime = time;
           oldestKey = k;
         }
-      }
+      });
 
       if (oldestKey) {
         cache.delete(oldestKey);

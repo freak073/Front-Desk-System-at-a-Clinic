@@ -63,7 +63,10 @@ jest.mock('../../lib/api', () => ({
             },
           });
         }
-        return Promise.resolve({ success: false, message: 'Invalid credentials' });
+  // Simulate 401 style error to trigger specific AuthContext error path
+  const error: any = new Error('Unauthorized');
+  error.response = { status: 401, data: { message: 'Invalid username or password' } };
+  return Promise.reject(error);
       }
       if (url === '/auth/logout') {
         return Promise.resolve({ success: true });
@@ -109,8 +112,8 @@ describe('Auth Flow', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'wrong' } });
     fireEvent.click(screen.getByText('Login'));
     await waitFor(() => {
-      expect(screen.getByText(/Cannot connect to server. Please try again./)).toBeInTheDocument();
-    });
+      expect(screen.getByText(/Invalid username or password/)).toBeInTheDocument();
+    }, { timeout: 1500 });
   });
 
   it('logs in with valid credentials and shows dashboard', async () => {
@@ -125,8 +128,8 @@ describe('Auth Flow', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'validpass' } });
     fireEvent.click(screen.getByText('Login'));
     await waitFor(() => {
-      expect(screen.getByText(/Clinic Front Desk/)).toBeInTheDocument();
-      expect(screen.getByText(/Select a tab to manage queues, appointments, doctors, or patients./)).toBeInTheDocument();
+      expect(screen.getByText(/Front Desk Dashboard/)).toBeInTheDocument();
+      expect(screen.getByText(/Use the navigation tabs above to manage Queue, Appointments, Doctors, and Patients./)).toBeInTheDocument();
     });
   });
 
@@ -182,6 +185,6 @@ describe('Auth Flow', () => {
     });
     
     // Should show dashboard content
-    expect(screen.getByText(/Select a tab to manage queues, appointments, doctors, or patients./)).toBeInTheDocument();
+  expect(screen.getByText(/Use the navigation tabs above to manage Queue, Appointments, Doctors, and Patients./)).toBeInTheDocument();
   });
 });
