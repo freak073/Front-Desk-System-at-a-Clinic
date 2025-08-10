@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { AuthContext } from '../../context/AuthContext';
 import NavigationTabs from '../components/NavigationTabs';
@@ -31,19 +31,21 @@ jest.mock('../dashboard/dashboard.service', () => ({
 
 describe('DashboardPage', () => {
   it('renders Header and NavigationTabs with dashboard stats', async () => {
-    render(
-      <AuthContext.Provider value={{
-        user: mockUser,
-        token: mockUser.token,
-        loading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshToken: jest.fn(),
-      }}>
-        <DashboardPage />
-      </AuthContext.Provider>
-    );
+    act(() => {
+      render(
+        <AuthContext.Provider value={{
+          user: mockUser,
+          token: mockUser.token,
+          loading: false,
+          error: null,
+          login: jest.fn(),
+          logout: jest.fn(),
+          refreshToken: jest.fn(),
+        }}>
+          <DashboardPage />
+        </AuthContext.Provider>
+      );
+    });
 
     expect(screen.getByText('Clinic Front Desk')).toBeInTheDocument();
     
@@ -58,19 +60,21 @@ describe('DashboardPage', () => {
   });
 
   it('redirects to login if user is not present', () => {
-    render(
-      <AuthContext.Provider value={{
-        user: null,
-        token: null,
-        loading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        refreshToken: jest.fn(),
-      }}>
-        <NavigationTabs pathname="/login" />
-      </AuthContext.Provider>
-    );
+    act(() => {
+      render(
+        <AuthContext.Provider value={{
+          user: null,
+          token: null,
+          loading: false,
+          error: null,
+          login: jest.fn(),
+          logout: jest.fn(),
+          refreshToken: jest.fn(),
+        }}>
+          <NavigationTabs pathname="/login" />
+        </AuthContext.Provider>
+      );
+    });
     // Should not render dashboard content
     expect(screen.queryByText('Welcome,')).not.toBeInTheDocument();
   });

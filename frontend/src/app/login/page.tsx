@@ -27,14 +27,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="card max-w-md w-full">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+        <h1 className="text-2xl font-bold text-white mb-6 text-center">
           Login to Front Desk System
         </h1>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1">
               Username
             </label>
             <input
@@ -49,7 +49,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
               Password
             </label>
             <input
@@ -64,7 +64,7 @@ export default function LoginPage() {
             />
           </div>
           {(formError || error) && (
-            <div className="text-red-600 text-sm text-center">{formError || error}</div>
+            <div className="text-red-400 text-sm text-center">{formError || error}</div>
           )}
           <button
             type="submit"

@@ -1,9 +1,12 @@
+import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import HomePage from '../page';
 
 describe('HomePage', () => {
   it('renders the welcome message', () => {
-    render(<HomePage />);
+    act(() => {
+      render(<HomePage />);
+    });
 
     expect(screen.getByText('Front Desk System')).toBeInTheDocument();
     expect(screen.getByText('Welcome to the Clinic Front Desk Management System')).toBeInTheDocument();
@@ -11,7 +14,9 @@ describe('HomePage', () => {
   });
 
   it('has a link to the login page', () => {
-    render(<HomePage />);
+    act(() => {
+      render(<HomePage />);
+    });
 
     const loginLink = screen.getByRole('link', { name: 'Login to Dashboard' });
     expect(loginLink).toHaveAttribute('href', '/login');
