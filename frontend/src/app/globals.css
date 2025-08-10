@@ -64,4 +64,187 @@
   .priority-urgent {
     @apply text-red-400 font-semibold;
   }
+  
+  /* Responsive Design Classes */
+  .mobile-container {
+    @apply px-4 py-6;
+  }
+  
+  .tablet-container {
+    @apply px-6 py-8;
+  }
+  
+  .desktop-container {
+    @apply px-8 py-10;
+  }
+  
+  .mobile-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+  
+  .tablet-grid {
+    @apply grid grid-cols-2 gap-6;
+  }
+  
+  .desktop-grid {
+    @apply grid grid-cols-3 gap-8;
+  }
+  
+  .responsive-table {
+    @apply w-full overflow-x-auto;
+  }
+  
+  .responsive-table table {
+    @apply min-w-full;
+  }
+  
+  .mobile-hidden {
+    @apply hidden sm:table-cell;
+  }
+  
+  .tablet-hidden {
+    @apply hidden md:table-cell;
+  }
+  
+  .desktop-hidden {
+    @apply hidden lg:table-cell;
+  }
+  
+  .mobile-only {
+    @apply sm:hidden;
+  }
+  
+  .tablet-only {
+    @apply md:hidden;
+  }
+  
+  .desktop-only {
+    @apply lg:hidden;
+  }
+  
+  .collapsible-menu {
+    @apply md:hidden;
+  }
+  
+  .collapsible-menu.open {
+    @apply block;
+  }
+  
+  .responsive-card {
+    @apply bg-gray-800 rounded-lg shadow p-4;
+  }
+  
+  .responsive-card-header {
+    @apply flex justify-between items-center pb-2 border-b border-gray-700;
+  }
+  
+  .responsive-card-content {
+    @apply pt-2;
+  }
+  
+  .responsive-button {
+    @apply px-3 py-2 text-sm rounded;
+  }
+  
+  .responsive-button-lg {
+    @apply px-4 py-2 text-base rounded-md;
+  }
+  
+  .responsive-input {
+    @apply w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+  
+  .responsive-select {
+    @apply w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500;
+  }
+  
+  .responsive-modal {
+    @apply fixed inset-0 z-50 overflow-y-auto;
+  }
+  
+  .responsive-modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity;
+  }
+  
+  .responsive-modal-container {
+    @apply flex min-h-screen items-center justify-center p-4;
+  }
+  
+  .responsive-modal-content {
+    @apply relative bg-gray-800 rounded-lg shadow-xl transform transition-all w-full max-w-md;
+  }
+  
+  .responsive-modal-content-lg {
+    @apply max-w-2xl;
+  }
+  
+  .responsive-modal-content-xl {
+    @apply max-w-4xl;
+  }
+  
+  .responsive-modal-header {
+    @apply flex items-center justify-between p-4 border-b border-gray-700 rounded-t;
+  }
+  
+  .responsive-modal-body {
+    @apply p-4;
+  }
+  
+  .responsive-modal-footer {
+    @apply flex justify-end space-x-3 p-4 border-t border-gray-700 rounded-b;
+  }
+  
+  /* Mobile First Design */
+  .mobile-first {
+    @apply block;
+  }
+  
+  .mobile-first-hidden {
+    @apply hidden;
+  }
+  
+  /* Breakpoint specific styles */
+  @media (min-width: 640px) {
+    .sm\:mobile-first {
+      @apply flex;
+    }
+    
+    .sm\:mobile-first-hidden {
+      @apply block;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .md\:mobile-first {
+      @apply flex;
+    }
+    
+    .md\:mobile-first-hidden {
+      @apply block;
+    }
+    
+    .md\:responsive-modal-content {
+      @apply max-w-lg;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .lg\:mobile-first {
+      @apply flex;
+    }
+    
+    .lg\:mobile-first-hidden {
+      @apply block;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .xl\:mobile-first {
+      @apply flex;
+    }
+    
+    .xl\:mobile-first-hidden {
+      @apply block;
+    }
+  }
 }

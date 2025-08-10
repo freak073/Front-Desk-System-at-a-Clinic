@@ -15,6 +15,18 @@ jest.mock('js-cookie', () => ({
     remove: jest.fn(),
   }
 }));
+// Mock react-query to avoid needing a QueryClientProvider in these auth flow tests
+jest.mock('react-query', () => ({
+  useQuery: jest.fn(() => ({
+    data: { data: { queueCount: 5, todayAppointments: 10, availableDoctors: 3, averageWaitTime: 15 } },
+    isFetching: false,
+    isLoading: false,
+  })),
+  useQueryClient: jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+  })),
+}));
 import '@testing-library/jest-dom';
 
 import React, { act } from 'react';

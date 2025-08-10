@@ -15,7 +15,7 @@ import {
   ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { DoctorsService } from './doctors.service';
-import { CreateDoctorDto, UpdateDoctorDto, DoctorResponseDto, DoctorQueryDto } from './dto';
+import { CreateDoctorDto, UpdateDoctorDto, DoctorResponseDto, DoctorQueryDto, UpdateDoctorScheduleDto } from './dto';
 import { plainToClass } from 'class-transformer';
 
 @ApiTags('Doctors')
@@ -88,6 +88,15 @@ export class DoctorsController {
     @Body('status') status: 'available' | 'busy' | 'off_duty',
   ): Promise<DoctorResponseDto> {
     const doctor = await this.doctorsService.updateStatus(id, status);
+    return plainToClass(DoctorResponseDto, doctor);
+  }
+
+  @Patch(':id/schedule')
+  async updateSchedule(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateDoctorScheduleDto,
+  ): Promise<DoctorResponseDto> {
+    const doctor = await this.doctorsService.updateSchedule(id, body);
     return plainToClass(DoctorResponseDto, doctor);
   }
 

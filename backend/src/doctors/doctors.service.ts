@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Doctor } from '../entities/doctor.entity';
-import { CreateDoctorDto, UpdateDoctorDto, DoctorQueryDto } from './dto';
+import { CreateDoctorDto, UpdateDoctorDto, DoctorQueryDto, UpdateDoctorScheduleDto } from './dto';
 
 @Injectable()
 export class DoctorsService {
@@ -84,6 +84,16 @@ export class DoctorsService {
       return await this.doctorRepository.save(doctor);
     } catch (error) {
       throw new BadRequestException('Failed to update doctor status');
+    }
+  }
+
+  async updateSchedule(id: number, dto: UpdateDoctorScheduleDto): Promise<Doctor> {
+    const doctor = await this.findOne(id);
+    doctor.availabilitySchedule = dto.schedule;
+    try {
+      return await this.doctorRepository.save(doctor);
+    } catch (error) {
+      throw new BadRequestException('Failed to update doctor schedule');
     }
   }
 

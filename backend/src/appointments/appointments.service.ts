@@ -13,6 +13,7 @@ import {
   CreateAppointmentDto,
 } from './dto/create-appointment.dto';
 import { AppointmentQueryDto } from './dto/appointment-query.dto';
+import { CacheService } from '../services/cache.service';
 
 @Injectable()
 export class AppointmentsService {
@@ -21,14 +22,59 @@ export class AppointmentsService {
     if (!appointment) {
       throw new NotFoundException(`Appointment with ID ${id} not found`);
     }
-    // Only allow status and notes update for this test
+
+    // Allow updating status, notes, appointmentDatetime and doctorId (reschedule)
     if (updateDto.status) {
       appointment.status = updateDto.status;
     }
-    if (updateDto.notes) {
+    if (updateDto.notes !== undefined) {
       appointment.notes = updateDto.notes;
     }
-    return await this.appointmentRepository.save(appointment);
+    const changingDoctor = updateDto.doctorId && updateDto.doctorId !== appointment.doctorId;
+    const changingTime = updateDto.appointmentDatetime && new Date(updateDto.appointmentDatetime).toISOString() !== appointment.appointmentDatetime.toISOString();
+    if (changingDoctor || changingTime) {
+      // Validate doctor if changed
+      if (changingDoctor) {
+        const newDoctorId = Number(updateDto.doctorId);
+        if (!newDoctorId || isNaN(newDoctorId)) {
+          throw new BadRequestException('Doctor ID must be a valid number');
+        }
+        const newDoctor = await this.doctorRepository.findOne({ where: { id: newDoctorId } });
+        if (!newDoctor) {
+          throw new NotFoundException(`Doctor with ID ${newDoctorId} not found`);
+        }
+        appointment.doctorId = newDoctorId;
+      }
+      // Validate new date/time
+      if (updateDto.appointmentDatetime) {
+        const newDate = new Date(updateDto.appointmentDatetime);
+        if (isNaN(newDate.getTime())) {
+          throw new BadRequestException('Invalid appointment date');
+        }
+        if (newDate <= new Date()) {
+          throw new BadRequestException('Appointment time must be in the future');
+        }
+        // Conflict check for (possibly new) doctor/time
+        const conflict = await this.appointmentRepository.findOne({
+          where: {
+            doctorId: appointment.doctorId,
+            appointmentDatetime: newDate,
+          },
+        });
+        if (conflict && conflict.id !== appointment.id) {
+          throw new ConflictException('Doctor is not available at the requested time');
+        }
+        appointment.appointmentDatetime = newDate;
+      }
+      // When rescheduling keep status booked unless explicitly changed to canceled/completed
+      if (!updateDto.status && appointment.status === 'canceled') {
+        appointment.status = 'booked';
+      }
+    }
+    const saved = await this.appointmentRepository.save(appointment);
+    // Invalidate related cache keys (broad strategy)
+    this.cacheService?.clear?.();
+    return saved;
   }
 
   async remove(id: number): Promise<void> {
@@ -45,6 +91,7 @@ export class AppointmentsService {
     private readonly doctorRepository: Repository<Doctor>,
     @InjectRepository(Patient)
     private readonly patientRepository: Repository<Patient>,
+    private readonly cacheService: CacheService,
   ) {}
 
   async create(createAppointmentDto: CreateAppointmentDto): Promise<Appointment> {
@@ -111,10 +158,18 @@ export class AppointmentsService {
         end: query.endDate,
       });
     }
-    const page = query.page || 1;
-    const limit = query.limit || 10;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
     qb.skip((page - 1) * limit).take(limit).orderBy('appointment.appointmentDatetime', 'ASC');
-    const [appointments, total] = await qb.getManyAndCount();
+
+    const cacheKey = this.cacheService.generateKey('appointments:list', { ...query, page, limit });
+    const { appointments, total } = await this.cacheService.wrap(
+      { key: cacheKey, ttl: 60 }, // short TTL for near-real-time data
+      async () => {
+        const [items, count] = await qb.getManyAndCount();
+        return { appointments: items, total: count };
+      }
+    );
     return {
       appointments,
       total,

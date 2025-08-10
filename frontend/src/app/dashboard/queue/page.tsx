@@ -1,429 +1,420 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from 'react-query';
 import { useAuth } from '../../../context/AuthContext';
-import { 
-  fetchCurrentQueue, 
-  addToQueue, 
-  updateQueueEntryStatus, 
-  removeFromQueue,
-  fetchPatients,
-  searchPatients
-} from './queue.service';
-import { QueueEntry, Patient } from '../../../types';
+import { useQueueUpdates, useNotifications } from '../../hooks/useRealTimeUpdates';
+import { logMetric } from '../../../lib/metrics';
+import VirtualizedList from '../../components/VirtualizedList';
+import StatusBadge from '../../components/StatusBadge';
+import Modal from '../../components/Modal';
+import { addToQueue, updateQueueEntryStatus, removeFromQueue, fetchPatients, searchPatients } from './queue.service';
+import { CreateQueueEntryDto, UpdateQueueEntryDto } from '../../../types';
+import PaginationControls from '../../components/PaginationControls';
+import { apiService } from '../../../lib/api';
+import { highlightMatch } from '../../components/highlight';
+import FilterBar from '../../components/FilterBar';
 
-const QueuePage = () => {
-  const { user } = useAuth();
-  const [queueEntries, setQueueEntries] = useState<QueueEntry[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const QueueManagementPage = () => {
+  useAuth();
+  React.useEffect(()=> { const t = performance.now(); return () => { logMetric({ name:'queue_page_time', duration: performance.now()-t, timestamp: Date.now() }); }; }, []);
+  const { showSuccess, showError } = useNotifications();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const { data: queueData, isLoading, isError, error, refetch } = useQueueUpdates(page, pageSize);
+  const queryClient = useQueryClient();
+  const queueEntriesRaw: any = queueData?.data;
+  let fetchedQueue: any[] = [];
+  if (Array.isArray(queueEntriesRaw?.data)) {
+    fetchedQueue = queueEntriesRaw.data;
+  } else if (Array.isArray(queueEntriesRaw)) {
+    fetchedQueue = queueEntriesRaw;
+  }
+  const [localQueue, setLocalQueue] = useState<any[]>([]);
+  // sync local queue when fresh data arrives (length or ids change)
+  useEffect(() => {
+    if (fetchedQueue.length) {
+      setLocalQueue(fetchedQueue.map(e => ({ ...e })));
+    }
+  }, [fetchedQueue.length]);
+  const totalQueue = queueEntriesRaw?.meta?.total || localQueue.length;
+  const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [priority, setPriority] = useState<'normal' | 'urgent'>('normal');
-  const [patientSearchTerm, setPatientSearchTerm] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [newPatientName, setNewPatientName] = useState('');
+  const [selectedExistingPatientId, setSelectedExistingPatientId] = useState<string>('');
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
+  const [priorityValue, setPriorityValue] = useState<'normal' | 'urgent'>('normal');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  // Load queue entries and patients
+  // Debounce search term
   useEffect(() => {
-    loadQueueEntries();
-    loadPatients();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchTerm]);
 
-  const loadQueueEntries = async () => {
-    try {
-      setLoading(true);
-      const entries = await fetchCurrentQueue();
-      setQueueEntries(entries);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load queue entries');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadPatients = async () => {
-    try {
-      const patientList = await fetchPatients();
-      setPatients(patientList);
-      setFilteredPatients(patientList);
-    } catch (err) {
-      console.error('Failed to load patients', err);
-    }
-  };
-
-  // Handle search
+  // Search patients when search term changes
   useEffect(() => {
-    if (patientSearchTerm.trim() === '') {
-      setFilteredPatients(patients);
-    } else {
-      const filtered = patients.filter(patient => 
-        patient.name.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
-        (patient.medicalRecordNumber && patient.medicalRecordNumber.toLowerCase().includes(patientSearchTerm.toLowerCase()))
-      );
-      setFilteredPatients(filtered);
-    }
-  }, [patientSearchTerm, patients]);
+    const searchPatientsDebounced = async () => {
+      if (debouncedSearchTerm) {
+        try {
+          const patients = await searchPatients(debouncedSearchTerm);
+          setAvailablePatients(patients);
+        } catch (err) {
+          console.error('Error searching patients:', err);
+        }
+      } else {
+        // Fetch all patients when search term is cleared
+        try {
+          const patients = await fetchPatients();
+          setAvailablePatients(patients);
+        } catch (err) {
+          console.error('Error fetching patients:', err);
+        }
+      }
+    };
 
-  // Filter queue entries by status and search term
-  const filteredQueueEntries = queueEntries.filter(entry => {
-    // Status filter
-    if (statusFilter !== 'all' && entry.status !== statusFilter) {
-      return false;
-    }
+    searchPatientsDebounced();
+  }, [debouncedSearchTerm]);
+
+  // Filter queue entries based on search and filter
+  const filteredQueueEntries = localQueue.filter((entry: any) => {
+  const matchesSearch = !debouncedSearchTerm || entry.patient?.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
     
-    // Search filter
-    if (searchTerm.trim() !== '') {
-      const searchLower = searchTerm.toLowerCase();
-      const patientName = entry.patient?.name?.toLowerCase() || '';
-      const medicalRecordNumber = entry.patient?.medicalRecordNumber?.toLowerCase() || '';
-      return patientName.includes(searchLower) || medicalRecordNumber.includes(searchLower);
-    }
+    const matchesStatus = statusFilter === 'all' || entry.status === statusFilter;
+    const matchesPriority = priorityFilter === 'all' || entry.priority === priorityFilter;
     
-    return true;
+    return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  // Handle adding patient to queue
-  const handleAddToQueue = async () => {
-    if (!selectedPatient) return;
-
+  const handleAddPatient = async () => {
     try {
-      const newEntry = await addToQueue({
-        patientId: selectedPatient.id,
-        priority
-      });
-
-      if (newEntry) {
-        setQueueEntries(prev => [...prev, newEntry]);
+      let patientId: number | null = null;
+      if (selectedExistingPatientId) {
+        patientId = parseInt(selectedExistingPatientId, 10);
+      } else if (newPatientName.trim()) {
+        const createRes = await apiService.post<any>('/patients', { name: newPatientName.trim() });
+        if (createRes?.data?.id) patientId = createRes.data.id as unknown as number;
+      }
+      if (!patientId) {
+        showError('Please select or create a patient');
+        return;
+      }
+      const newEntry: CreateQueueEntryDto = { patientId, priority: priorityValue };
+      const result = await addToQueue(newEntry);
+      if (result) {
+        setNewPatientName('');
+        setSelectedExistingPatientId('');
+        setPriorityValue('normal');
         setShowAddModal(false);
-        setSelectedPatient(null);
-        setPriority('normal');
-        setPatientSearchTerm('');
-      } else {
-        setError('Failed to add patient to queue');
+        showSuccess('Patient added to queue successfully');
+        refetch();
       }
     } catch (err) {
-      setError('Failed to add patient to queue');
-      console.error(err);
+      console.error('Error adding patient to queue:', err);
+      showError('Failed to add patient to queue');
     }
   };
 
-  // Handle status update
-  const handleStatusUpdate = async (id: number, newStatus: 'waiting' | 'with_doctor' | 'completed') => {
+  const handleStatusChange = async (id: number, status: string) => {
+    const prevEntries = localQueue.map(e => ({ ...e }));
+    // optimistic update
+    setLocalQueue(q => q.map(e => e.id === id ? { ...e, status } : e));
     try {
-      const updatedEntry = await updateQueueEntryStatus(id, { status: newStatus });
-      if (updatedEntry) {
-        setQueueEntries(prev => 
-          prev.map(entry => entry.id === id ? updatedEntry : entry)
-        );
-      }
+      const updateData: UpdateQueueEntryDto = { status: status as 'waiting' | 'with_doctor' | 'completed' };
+      const result = await updateQueueEntryStatus(id, updateData);
+      if (result) {
+        showSuccess('Queue status updated');
+  queryClient.invalidateQueries('queue');
+        refetch();
+      } else throw new Error('No result');
     } catch (err) {
-      setError('Failed to update queue entry status');
-      console.error(err);
+      // rollback
+      setLocalQueue(prevEntries);
+      showError('Failed to update queue status');
     }
   };
 
-  // Handle removing patient from queue
-  const handleRemoveFromQueue = async (id: number) => {
+  const handleRemovePatient = async (id: number) => {
     try {
       const success = await removeFromQueue(id);
       if (success) {
-        setQueueEntries(prev => prev.filter(entry => entry.id !== id));
-      } else {
-        setError('Failed to remove patient from queue');
+        showSuccess('Patient removed from queue successfully');
+        
+        // Refetch to get updated data
+  queryClient.invalidateQueries('queue');
+        refetch();
       }
     } catch (err) {
-      setError('Failed to remove patient from queue');
-      console.error(err);
+      console.error('Error removing patient from queue:', err);
+      showError('Failed to remove patient from queue');
     }
   };
 
-  // Format date for display
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  // Priority badge component
-  const PriorityBadge = ({ priority }: { priority: 'normal' | 'urgent' }) => (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-      priority === 'urgent' 
-        ? 'bg-red-100 text-red-800' 
-        : 'bg-blue-100 text-blue-800'
-    }`}>
-      {priority === 'urgent' ? 'Urgent' : 'Normal'}
-    </span>
-  );
-
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const statusClasses = {
-      waiting: 'bg-yellow-100 text-yellow-800',
-      with_doctor: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800'
-    };
-
-    const statusText = {
-      waiting: 'Waiting',
-      with_doctor: 'With Doctor',
-      completed: 'Completed'
-    };
-
+  const isInitialLoading = isLoading && localQueue.length === 0;
+  if (isInitialLoading) {
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[status as keyof typeof statusClasses] || 'bg-gray-100 text-gray-800'}`}>
-        {statusText[status as keyof typeof statusText] || status}
-      </span>
+      <div className="p-8">
+        <div className="grid gap-4">
+          {Array.from({length:6}).map((_,i)=>(
+            <div key={i} className="h-16 bg-gray-100 animate-pulse rounded" />
+          ))}
+        </div>
+      </div>
     );
-  };
+  }
 
-  if (!user) return null;
+  if (isError) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <h3 className="text-lg font-medium text-red-800">Error Loading Queue</h3>
+          <p className="mt-2 text-red-600">{error?.message || 'Failed to load queue data'}</p>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+    <div className="p-4 sm:p-6 md:p-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Queue Management</h1>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition flex items-center gap-2 justify-center shadow-md hover:shadow-lg"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
         >
-          <span className="text-xl">+</span> Add to Queue
+          + Add Patient to Queue
         </button>
       </div>
 
-      {/* Search and Filter Section */}
-      <div className="bg-white shadow rounded-lg p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search patients by name or medical record number..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="w-full md:w-48">
-            <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">All Statuses</option>
-              <option value="waiting">Waiting</option>
-              <option value="with_doctor">With Doctor</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
-        </div>
-      )}
+      <FilterBar
+        search={{ id: 'search', label: 'Search Patient', placeholder: 'Search by patient name', value: searchTerm, onChange: setSearchTerm }}
+        selects={[
+          { id: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [
+            { value:'all', label:'All Statuses' },
+            { value:'waiting', label:'Waiting' },
+            { value:'with_doctor', label:'With Doctor' },
+            { value:'completed', label:'Completed' }
+          ]},
+          { id: 'priority', label: 'Priority', value: priorityFilter, onChange: setPriorityFilter, options: [
+            { value:'all', label:'All Priorities' },
+            { value:'normal', label:'Normal' },
+            { value:'urgent', label:'Urgent' }
+          ]}
+        ]}
+        onClear={() => { setSearchTerm(''); setStatusFilter('all'); setPriorityFilter('all'); }}
+      />
 
       {/* Queue List */}
-      <div className="bg-white shadow rounded-lg">
-        {loading ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading queue entries...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="responsive-table">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Queue #
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patient Name
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell mobile-hidden">
+                  Arrival Time
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sm:table-cell mobile-hidden">
+                  Est. Wait
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Priority
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredQueueEntries.length === 0 ? (
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Queue #
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Arrival Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Wait Time
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    {searchTerm || statusFilter !== 'all'
+                      ? 'No patients match your search criteria'
+                      : 'No patients in queue'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredQueueEntries.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                      No patients in queue
+              ) : (
+                <VirtualizedList
+                  items={filteredQueueEntries}
+                  itemHeight={70}
+                  height={Math.min(560, filteredQueueEntries.length * 70)}
+                  className="divide-y divide-gray-200"
+                  renderItem={(entry: any) => (
+                  <tr key={entry.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {entry.queueNumber}
                     </td>
-                  </tr>
-                ) : (
-                  filteredQueueEntries.map((entry) => (
-                    <tr key={entry.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">#{entry.queueNumber}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{entry.patient?.name}</div>
-                        <div className="text-sm text-gray-500">{entry.patient?.medicalRecordNumber}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <PriorityBadge priority={entry.priority as 'normal' | 'urgent'} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatTime(entry.arrivalTime)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.estimatedWaitTime !== undefined ? `${entry.estimatedWaitTime} min` : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={entry.status} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {highlightMatch(entry.patient?.name || 'N/A', debouncedSearchTerm)}
+                      <div className="sm:hidden text-xs text-gray-500">
+                        {new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({entry.estimatedWaitTime} min)
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 mobile-hidden">
+                      {new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 mobile-hidden">
+                      {entry.estimatedWaitTime} min
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge status={entry.status} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        entry.priority === 'urgent'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {entry.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <div className="flex flex-col gap-1">
                           <select
-                            className="text-xs border border-gray-300 rounded px-2 py-1"
+                            aria-label="Update status"
                             value={entry.status}
-                            onChange={(e) => handleStatusUpdate(entry.id, e.target.value as any)}
+                            onChange={(e) => handleStatusChange(entry.id, e.target.value)}
+                            className="text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
                           >
                             <option value="waiting">Waiting</option>
                             <option value="with_doctor">With Doctor</option>
                             <option value="completed">Completed</option>
                           </select>
-                          <button
-                            onClick={() => handleRemoveFromQueue(entry.id)}
-                            className="text-red-600 hover:text-red-900 text-xs"
+                          <select
+                            aria-label="Update priority"
+                            value={entry.priority}
+                            onChange={async (e) => {
+                              try {
+                                const updateData: UpdateQueueEntryDto = { priority: e.target.value as 'normal' | 'urgent' };
+                                await updateQueueEntryStatus(entry.id, updateData);
+                                showSuccess('Priority updated');
+                                refetch();
+                              } catch {
+                                showError('Failed to update priority');
+                              }
+                            }}
+                            className="text-sm border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
                           >
-                            Remove
-                          </button>
+                            <option value="normal">Normal</option>
+                            <option value="urgent">Urgent</option>
+                          </select>
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        <button
+                          onClick={() => handleRemovePatient(entry.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  )}
+                />
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Add to Queue Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Add Patient to Queue</h3>
-            </div>
-            <div className="px-6 py-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Search Patient
-                </label>
-                <input
-                  type="text"
-                  placeholder="Search by name or medical record number"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={patientSearchTerm}
-                  onChange={(e) => setPatientSearchTerm(e.target.value)}
-                />
-              </div>
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        total={totalQueue}
+        onPageChange={(p) => { setPage(p); refetch(); }}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); refetch(); }}
+      />
 
-              {selectedPatient ? (
-                <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-gray-900">{selectedPatient.name}</p>
-                      <p className="text-sm text-gray-500">{selectedPatient.medicalRecordNumber}</p>
-                    </div>
-                    <button
-                      onClick={() => setSelectedPatient(null)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      Change
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-4 max-h-48 overflow-y-auto">
-                  {filteredPatients.slice(0, 5).map((patient) => (
-                    <div
-                      key={patient.id}
-                      className="p-2 hover:bg-gray-100 cursor-pointer rounded"
-                      onClick={() => setSelectedPatient(patient)}
-                    >
-                      <p className="font-medium text-gray-900">{patient.name}</p>
-                      <p className="text-sm text-gray-500">{patient.medicalRecordNumber}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
-                </label>
-                <div className="flex space-x-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      className="form-radio"
-                      name="priority"
-                      value="normal"
-                      checked={priority === 'normal'}
-                      onChange={() => setPriority('normal')}
-                    />
-                    <span className="ml-2">Normal</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      className="form-radio"
-                      name="priority"
-                      value="urgent"
-                      checked={priority === 'urgent'}
-                      onChange={() => setPriority('urgent')}
-                    />
-                    <span className="ml-2">Urgent</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddToQueue}
-                disabled={!selectedPatient}
-                className={`px-4 py-2 rounded-md text-white ${
-                  selectedPatient
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Add to Queue
-              </button>
-            </div>
+      {/* Add Patient Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add Patient to Queue"
+      >
+        <div className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-gray-700">Select Existing Patient</legend>
+            <select
+              value={selectedExistingPatientId}
+              onChange={(e) => setSelectedExistingPatientId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- None --</option>
+              {availablePatients.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </fieldset>
+          <div>
+            <label htmlFor="patientName" className="block text-sm font-medium text-gray-700 mb-1">
+              Or Create New Patient
+            </label>
+            <input
+              type="text"
+              id="patientName"
+              value={newPatientName}
+              onChange={(e) => setNewPatientName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter patient name"
+            />
+          </div>
+          <div>
+            <label htmlFor="prioritySelect" className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select
+              id="prioritySelect"
+              value={priorityValue}
+              onChange={(e) => setPriorityValue(e.target.value as 'normal' | 'urgent')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="normal">Normal</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddPatient}
+              disabled={!(newPatientName.trim() || selectedExistingPatientId)}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                !(newPatientName.trim() || selectedExistingPatientId)
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              Add to Queue
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
 
-export default QueuePage;
+export default QueueManagementPage;

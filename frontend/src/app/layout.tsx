@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'Front Desk System',
@@ -16,9 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-900 min-h-screen text-gray-100">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <div className="pb-16">{children}</div>
+            {typeof window !== 'undefined' && require('./components/MobileNav').default({})}
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

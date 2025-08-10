@@ -1,6 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('doctors')
+@Index(['specialization'])
+@Index(['status'])
+@Index(['name'])
+@Index(['specialization', 'status'])
 export class Doctor {
   @PrimaryGeneratedColumn()
   id: number;

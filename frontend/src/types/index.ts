@@ -128,6 +128,7 @@ export interface UpdateAppointmentDto {
   appointmentDatetime?: string;
   status?: 'booked' | 'completed' | 'canceled';
   notes?: string;
+  doctorId?: number; // allow changing doctor during reschedule
 }
 
 export interface LoginDto {

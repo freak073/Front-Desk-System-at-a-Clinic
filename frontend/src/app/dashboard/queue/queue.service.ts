@@ -53,7 +53,7 @@ export const fetchQueueStats = async (): Promise<QueueStats> => {
 
 export const searchQueue = async (searchTerm: string): Promise<QueueEntry[]> => {
   try {
-    const response = await apiService.get<QueueEntry[]>('/queue/search', { q: searchTerm });
+    const response = await apiService.get<QueueEntry[]>('/queue', { search: searchTerm });
     return response.data || [];
   } catch (error) {
     console.error('Failed to search queue:', error);

@@ -100,9 +100,6 @@ export const apiService = {
     
   put: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
     api.put(url, data).then(res => res.data),
-    
-  put: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
-    api.put(url, data).then(res => res.data),
   
   patch: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
     api.patch(url, data).then(res => res.data),

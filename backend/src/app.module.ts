@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { DoctorsModule } from './doctors/doctors.module';
@@ -8,6 +9,22 @@ import { PatientsModule } from './patients/patients.module';
 import { QueueModule } from './queue/queue.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
+import { 
+  PerformanceMiddleware, 
+  ResponseCacheMiddleware, 
+  QueryOptimizationMiddleware 
+} from './middleware/performance.middleware';
+import {
+  ResponseTimeInterceptor,
+  ResponseOptimizationInterceptor,
+  PaginationInterceptor,
+  DataTransformInterceptor
+} from './interceptors/performance.interceptor';
+import { CacheService } from './services/cache.service';
+import { QueryOptimizationService } from './services/query-optimization.service';
+import { ErrorMonitoringService } from './services/error-monitoring.service';
+import { GlobalExceptionFilter } from './filters/global-exception.filter';
 
 @Module({
   imports: [
@@ -39,7 +56,42 @@ import { DashboardModule } from './dashboard/dashboard.module';
     QueueModule,
     AppointmentsModule,
     DashboardModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
+  providers: [
+    PerformanceMiddleware,
+    ResponseCacheMiddleware,
+    QueryOptimizationMiddleware,
+    CacheService,
+    QueryOptimizationService,
+    ErrorMonitoringService,
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseTimeInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseOptimizationInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: PaginationInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DataTransformInterceptor,
+    }
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(PerformanceMiddleware, ResponseCacheMiddleware, QueryOptimizationMiddleware)
+      .forRoutes('*');
+  }
+}
