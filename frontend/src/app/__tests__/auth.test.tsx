@@ -4,6 +4,7 @@ jest.mock('next/navigation', () => ({
     replace: jest.fn(),
     prefetch: jest.fn(),
   }),
+  usePathname: () => '/dashboard',
 }));
 import '@testing-library/jest-dom';
 
@@ -78,7 +79,8 @@ describe('Auth Flow', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'validpass' } });
     fireEvent.click(screen.getByText('Login'));
     await waitFor(() => {
-      expect(screen.getByText(/Clinic Front Desk Dashboard/)).toBeInTheDocument();
+      expect(screen.getByText(/Clinic Front Desk/)).toBeInTheDocument();
+      expect(screen.getByText(/Select a tab to manage queues, appointments, doctors, or patients./)).toBeInTheDocument();
     });
   });
 
@@ -93,9 +95,10 @@ describe('Auth Flow', () => {
         <TestDashboard />
       </AuthProvider>
     );
-    // Should show dashboard header
+    // Should show dashboard header and content
     await waitFor(() => {
-      expect(screen.getByText(/Clinic Front Desk Dashboard/)).toBeInTheDocument();
+      expect(screen.getByText(/Clinic Front Desk/)).toBeInTheDocument();
+      expect(screen.getByText(/Select a tab to manage queues, appointments, doctors, or patients./)).toBeInTheDocument();
     });
   });
 });

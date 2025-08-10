@@ -136,10 +136,14 @@ export interface LoginDto {
 }
 
 export interface AuthResponse {
-  success: boolean;
+  success?: boolean;
   data?: {
-    user: User;
-    token: string;
+    user?: User;
+    token?: string;
+    access_token?: string;
   };
+  token?: string;
+  access_token?: string;
   message?: string;
+  user?: User;
 }

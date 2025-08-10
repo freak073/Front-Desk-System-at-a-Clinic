@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosResponse, AxiosError } from 'axios';
 import Cookies from 'js-cookie';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -9,7 +9,9 @@ export const api = axios.create({
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: true,
 });
 
 // Request interceptor to add auth token
@@ -21,23 +23,46 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
+  (error: AxiosError) => {
+    return Promise.reject(new Error(error.message));
   }
 );
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
+    // Handle login response specially
+    if (response.config.url === '/auth/login' && response.data.access_token) {
+      Cookies.set('auth_token', response.data.access_token);
+      return {
+        ...response,
+        data: {
+          success: true,
+          data: response.data
+        }
+      } as AxiosResponse;
+    }
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401) {
+  (error: AxiosError) => {
+    if (!error.response) {
+      // Network error or server not running
+      return Promise.reject(new Error('Unable to connect to the server. Please make sure the backend server is running.'));
+    }
+    
+    if (error.response.status === 401) {
       // Handle unauthorized access
       Cookies.remove('auth_token');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
-    return Promise.reject(error);
+
+    const errorMessage = 
+      (error.response.data as { message?: string })?.message || 
+      error.message || 
+      'An unexpected error occurred';
+    return Promise.reject(new Error(errorMessage));
   }
 );
 
@@ -47,6 +72,10 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   errors?: string[];
+}
+
+export interface LoginResponse {
+  access_token: string;
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
@@ -64,7 +93,10 @@ export const apiService = {
     api.get(url, { params }).then(res => res.data),
     
   post: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
-    api.post(url, data).then(res => res.data),
+    api.post(url, data).then(res => {
+      console.log('API Response:', res);
+      return res.data;
+    }),
     
   put: <T>(url: string, data?: any): Promise<ApiResponse<T>> =>
     api.put(url, data).then(res => res.data),
