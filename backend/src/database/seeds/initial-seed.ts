@@ -4,8 +4,7 @@ import { User, Doctor, Patient, QueueEntry, Appointment } from "../../entities";
 
 export async function seedDatabase(dataSource: DataSource) {
   const allowReset = process.env.ALLOW_DB_RESET === 'true';
-  const env = process.env.NODE_ENV || 'development';
-  const destructiveEnv = ['production', 'staging'].includes(env) && allowReset;
+  // Note: destructiveEnv removed (unused) to satisfy linter
 
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
@@ -149,15 +148,12 @@ export async function seedDatabase(dataSource: DataSource) {
         existing = patientRepo.create(pat);
         await patientRepo.save(existing);
         console.log(`🧍 Added patient ${pat.name}`);
+      } else if (existing.contactInfo !== pat.contactInfo) {
+        existing.contactInfo = pat.contactInfo;
+        await patientRepo.save(existing);
+        console.log(`♻️ Updated patient ${pat.name}`);
       } else {
-        // Update contact info if changed
-        if (existing.contactInfo !== pat.contactInfo) {
-          existing.contactInfo = pat.contactInfo;
-          await patientRepo.save(existing);
-          console.log(`♻️ Updated patient ${pat.name}`);
-        } else {
-          console.log(`✔️ Patient ${pat.name} unchanged`);
-        }
+        console.log(`✔️ Patient ${pat.name} unchanged`);
       }
       savedPatients.push(existing);
     }
@@ -191,8 +187,7 @@ export async function seedDatabase(dataSource: DataSource) {
         appointments.map((a) => dataSource.getRepository(Appointment).create(a))
       );
     } else {
-      console.log("ℹ️ Skipping appointments reseed (non-destructive mode).
-Add targeted appointment upsert logic here later if needed.");
+      console.log("ℹ️ Skipping appointments reseed (non-destructive mode). Add targeted appointment upsert logic here later if needed.");
     }
 
     await queryRunner.commitTransaction();
