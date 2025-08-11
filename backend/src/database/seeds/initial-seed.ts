@@ -3,32 +3,50 @@ import * as bcrypt from "bcrypt";
 import { User, Doctor, Patient, QueueEntry, Appointment } from "../../entities";
 
 export async function seedDatabase(dataSource: DataSource) {
+  const allowReset = process.env.ALLOW_DB_RESET === 'true';
+  const env = process.env.NODE_ENV || 'development';
+  const destructiveEnv = ['production', 'staging'].includes(env) && allowReset;
+
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
   await queryRunner.startTransaction();
 
   try {
-    console.log("🔧 Disabling foreign key checks...");
-    await queryRunner.query("SET FOREIGN_KEY_CHECKS = 0;");
-
-    // ✅ Clear tables and reset auto-increment IDs
-    const tables = ["appointments", "queue_entries", "patients", "doctors", "users"];
-    for (const table of tables) {
-      await queryRunner.query(`TRUNCATE TABLE ${table}`);
+    if (allowReset) {
+      console.log("🔧 Disabling foreign key checks (reset mode)...");
+      await queryRunner.query("SET FOREIGN_KEY_CHECKS = 0;");
+      const tables = ["appointments", "queue_entries", "patients", "doctors", "users"];
+      for (const table of tables) {
+        await queryRunner.query(`TRUNCATE TABLE ${table}`);
+      }
+      console.log("🧹 Cleared all tables due to ALLOW_DB_RESET=true.");
+    } else {
+      console.log("ℹ️ ALLOW_DB_RESET not set - performing idempotent seed (no destructive truncate).");
     }
-    console.log("🧹 Cleared all tables.");
 
-    // ✅ Create default user
-    const hashedPassword = await bcrypt.hash(
-      process.env.SEED_ADMIN_PASSWORD || "admin123",
-      10
-    );
-    const user = dataSource.getRepository(User).create({
-      username: "admin",
-      passwordHash: hashedPassword,
-      role: "front_desk",
-    });
-    await dataSource.getRepository(User).save(user);
+    // ✅ Upsert default user (by username)
+    const adminUsername = 'admin';
+    let user = await dataSource.getRepository(User).findOne({ where: { username: adminUsername } });
+    if (!user) {
+      const hashedPassword = await bcrypt.hash(
+        process.env.SEED_ADMIN_PASSWORD || "admin123",
+        10
+      );
+      user = dataSource.getRepository(User).create({
+        username: adminUsername,
+        passwordHash: hashedPassword,
+        role: "front_desk",
+      });
+      await dataSource.getRepository(User).save(user);
+      console.log("👤 Created admin user.");
+    } else if (process.env.SEED_ADMIN_PASSWORD) {
+      // Optional password rotate if explicit password provided
+      user.passwordHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD, 10);
+      await dataSource.getRepository(User).save(user);
+      console.log("🔐 Updated admin password.");
+    } else {
+      console.log("👤 Admin user already exists.");
+    }
 
     // ✅ Sample doctors
     const doctors = [
@@ -89,9 +107,28 @@ export async function seedDatabase(dataSource: DataSource) {
         },
       },
     ];
-    const savedDoctors = await dataSource.getRepository(Doctor).save(
-      doctors.map((d) => dataSource.getRepository(Doctor).create(d))
-    );
+    const doctorRepo = dataSource.getRepository(Doctor);
+    const savedDoctors: Doctor[] = [];
+    for (const doc of doctors) {
+      let existing = await doctorRepo.findOne({ where: { name: doc.name, specialization: doc.specialization } });
+      if (!existing) {
+        existing = doctorRepo.create(doc);
+        await doctorRepo.save(existing);
+        console.log(`🩺 Added doctor ${doc.name}`);
+      } else {
+        // Merge status / schedule updates if changed
+        let changed = false;
+        if (JSON.stringify(existing.availabilitySchedule) !== JSON.stringify(doc.availabilitySchedule)) {
+          existing.availabilitySchedule = doc.availabilitySchedule as any;
+          changed = true;
+        }
+        if (existing.status !== doc.status) { existing.status = doc.status; changed = true; }
+        if (existing.location !== doc.location) { existing.location = doc.location; changed = true; }
+        if (changed) { await doctorRepo.save(existing); console.log(`♻️ Updated doctor ${doc.name}`); }
+        else { console.log(`✔️ Doctor ${doc.name} unchanged`); }
+      }
+      savedDoctors.push(existing);
+    }
 
     // ✅ Sample patients
     const patients = [
@@ -104,9 +141,26 @@ export async function seedDatabase(dataSource: DataSource) {
       { name: "Michael Martinez", contactInfo: "michael.martinez@email.com, (555) 789-0123", medicalRecordNumber: "MR007" },
       { name: "Sarah Anderson", contactInfo: "sarah.anderson@email.com, (555) 890-1234", medicalRecordNumber: "MR008" },
     ];
-    const savedPatients = await dataSource.getRepository(Patient).save(
-      patients.map((p) => dataSource.getRepository(Patient).create(p))
-    );
+    const patientRepo = dataSource.getRepository(Patient);
+    const savedPatients: Patient[] = [];
+    for (const pat of patients) {
+      let existing = await patientRepo.findOne({ where: { medicalRecordNumber: pat.medicalRecordNumber } });
+      if (!existing) {
+        existing = patientRepo.create(pat);
+        await patientRepo.save(existing);
+        console.log(`🧍 Added patient ${pat.name}`);
+      } else {
+        // Update contact info if changed
+        if (existing.contactInfo !== pat.contactInfo) {
+          existing.contactInfo = pat.contactInfo;
+          await patientRepo.save(existing);
+          console.log(`♻️ Updated patient ${pat.name}`);
+        } else {
+          console.log(`✔️ Patient ${pat.name} unchanged`);
+        }
+      }
+      savedPatients.push(existing);
+    }
 
     // ✅ Queue entries
     const queueEntries = [
@@ -115,9 +169,13 @@ export async function seedDatabase(dataSource: DataSource) {
       { patientId: savedPatients[2].id, queueNumber: 3, status: "waiting", priority: "normal", arrivalTime: new Date(Date.now() - 15 * 60 * 1000), estimatedWaitTime: 25 },
       { patientId: savedPatients[3].id, queueNumber: 4, status: "waiting", priority: "urgent", arrivalTime: new Date(Date.now() - 10 * 60 * 1000), estimatedWaitTime: 5 },
     ];
-    await dataSource.getRepository(QueueEntry).save(
-      queueEntries.map((q) => dataSource.getRepository(QueueEntry).create(q))
-    );
+    if (allowReset) {
+      await dataSource.getRepository(QueueEntry).save(
+        queueEntries.map((q) => dataSource.getRepository(QueueEntry).create(q))
+      );
+    } else {
+      console.log("ℹ️ Skipping queueEntries reseed (non-destructive mode).");
+    }
 
     // ✅ Appointments
     const now = new Date();
@@ -128,9 +186,14 @@ export async function seedDatabase(dataSource: DataSource) {
       { patientId: savedPatients[7].id, doctorId: savedDoctors[0].id, appointmentDatetime: new Date(now.getTime() - 24 * 60 * 60 * 1000), status: "completed", notes: "Follow-up visit completed" },
       { patientId: savedPatients[0].id, doctorId: savedDoctors[3].id, appointmentDatetime: new Date(now.getTime() + 48 * 60 * 60 * 1000), status: "canceled", notes: "Patient requested cancellation" },
     ];
-    await dataSource.getRepository(Appointment).save(
-      appointments.map((a) => dataSource.getRepository(Appointment).create(a))
-    );
+    if (allowReset) {
+      await dataSource.getRepository(Appointment).save(
+        appointments.map((a) => dataSource.getRepository(Appointment).create(a))
+      );
+    } else {
+      console.log("ℹ️ Skipping appointments reseed (non-destructive mode).
+Add targeted appointment upsert logic here later if needed.");
+    }
 
     await queryRunner.commitTransaction();
 
@@ -143,8 +206,10 @@ export async function seedDatabase(dataSource: DataSource) {
     console.error("❌ Error while seeding:", error);
     throw error;
   } finally {
-    await queryRunner.query("SET FOREIGN_KEY_CHECKS = 1;");
+    if (allowReset) {
+      await queryRunner.query("SET FOREIGN_KEY_CHECKS = 1;");
+      console.log("🔒 Foreign key checks re-enabled.");
+    }
     await queryRunner.release();
-    console.log("🔒 Foreign key checks re-enabled.");
   }
 }

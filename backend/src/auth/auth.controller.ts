@@ -28,7 +28,8 @@ export class AuthController {
     @Body(ValidationPipe) loginDto: LoginDto,
     @CurrentUser() user: User,
   ): Promise<AuthResponseDto> {
-    return this.authService.login(loginDto);
+  const auth = await this.authService.login(loginDto);
+  return { success: true, data: auth } as any;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -37,7 +38,7 @@ export class AuthController {
   async logout(): Promise<{ message: string }> {
     // JWT tokens are stateless, so logout is handled client-side
     // by removing the token from storage
-    return { message: 'Logged out successfully' };
+  return { success: true, data: { message: 'Logged out successfully' } } as any;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -47,18 +48,14 @@ export class AuthController {
     username: string;
     role: string;
   }> {
-    return {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
+  return { success: true, data: { id: user.id, username: user.username, role: user.role } } as any;
   }
 
   // Token verification for existing session
   @UseGuards(JwtAuthGuard)
   @Get('verify')
   verifyToken() {
-    return { success: true };
+  return { success: true, data: { valid: true } } as any;
   }
 
   // Simplistic refresh: guarded endpoint re-issues token with same identity.
@@ -66,6 +63,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@CurrentUser() user: User, @Body() _body: RefreshTokenDto): Promise<AuthResponseDto> {
-    return this.authService.issueFromUser(user);
+  const issued = this.authService.issueFromUser(user);
+  return { success: true, data: issued } as any;
   }
 }

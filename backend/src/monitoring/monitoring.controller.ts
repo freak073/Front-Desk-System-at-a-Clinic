@@ -2,7 +2,7 @@
  * Controller for monitoring and health checks
  */
 
-import { Controller, Get, UseGuards, Query, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -32,19 +32,21 @@ export class MonitoringController {
   getHealth() {
     const memoryUsage = process.memoryUsage();
     const uptime = process.uptime();
-
     return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: uptime,
-      memory: {
-        rss: Math.round(memoryUsage.rss / 1024 / 1024) + ' MB',
-        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + ' MB',
-        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + ' MB',
-        external: Math.round(memoryUsage.external / 1024 / 1024) + ' MB',
-      },
-      version: process.env.npm_package_version || 'unknown',
-      environment: process.env.NODE_ENV || 'development',
+      success: true,
+      data: {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: uptime,
+        memory: {
+          rss: Math.round(memoryUsage.rss / 1024 / 1024) + ' MB',
+          heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + ' MB',
+          heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + ' MB',
+          external: Math.round(memoryUsage.external / 1024 / 1024) + ' MB',
+        },
+        version: process.env.npm_package_version || 'unknown',
+        environment: process.env.NODE_ENV || 'development',
+      }
     };
   }
 
@@ -56,13 +58,9 @@ export class MonitoringController {
   @ApiResponse({ status: 200, description: 'Service ready' })
   @ApiResponse({ status: 500, description: 'Not ready' })
   async getReady() {
-    try {
-      // Lightweight query to confirm DB connectivity
-      await this.dataSource.query('SELECT 1');
-      return { status: 'ready', timestamp: new Date().toISOString() };
-    } catch (err) {
-      throw new InternalServerErrorException('Not ready');
-    }
+  // Lightweight query to confirm DB connectivity (let global filters handle errors)
+  await this.dataSource.query('SELECT 1');
+  return { success: true, data: { status: 'ready', timestamp: new Date().toISOString() } };
   }
 
   /**
@@ -75,7 +73,7 @@ export class MonitoringController {
   @ApiResponse({ status: 200, description: 'Error statistics' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   getErrorStats() {
-    return this.errorMonitoringService.getErrorStats();
+    return { success: true, data: this.errorMonitoringService.getErrorStats() };
   }
 
   /**
@@ -94,9 +92,9 @@ export class MonitoringController {
     @Query('severity') severity?: ErrorSeverity,
   ) {
     if (severity) {
-      return this.errorMonitoringService.getErrorsBySeverity(severity, limit || 10);
+      return { success: true, data: this.errorMonitoringService.getErrorsBySeverity(severity, limit || 10) };
     }
-    return this.errorMonitoringService.getRecentErrors(limit || 10);
+    return { success: true, data: this.errorMonitoringService.getRecentErrors(limit || 10) };
   }
 
   /**
@@ -109,7 +107,7 @@ export class MonitoringController {
   @ApiResponse({ status: 200, description: 'Cache statistics' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   getCacheStats() {
-    return this.cacheService.getStats();
+    return { success: true, data: this.cacheService.getStats() };
   }
 
   /**
