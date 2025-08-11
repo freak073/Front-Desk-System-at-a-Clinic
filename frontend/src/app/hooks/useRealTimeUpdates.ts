@@ -88,6 +88,7 @@ export const useQueueUpdates = (page: number = 1, pageSize: number = 10) => {
   const endpoint = useMemo(() => `/queue?page=${page}&limit=${pageSize}`, [page, pageSize]);
   
   return useRealTimeUpdates<{
+    success: boolean;
     data: any[];
     meta: {
       total: number;
@@ -111,6 +112,7 @@ export const useAppointmentUpdates = (page: number = 1, pageSize: number = 10, d
   }, [page, pageSize, date]);
   
   return useRealTimeUpdates<{
+    success: boolean;
     data: any[];
     meta: {
       total: number;
@@ -134,6 +136,7 @@ export const useDoctorStatusUpdates = (page: number = 1, pageSize: number = 10, 
   }, [page, pageSize, status]);
   
   return useRealTimeUpdates<{
+    success: boolean;
     data: any[];
     meta: {
       total: number;

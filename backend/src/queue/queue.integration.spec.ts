@@ -32,8 +32,11 @@ describe('QueueController (Integration)', () => {
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
     getOne: jest.fn(),
+  getCount: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -194,14 +197,17 @@ describe('QueueController (Integration)', () => {
       ];
 
       mockQueryBuilder.getMany.mockResolvedValue(mockQueueEntries);
+  mockQueryBuilder.getCount.mockResolvedValue(2);
 
       const response = await request(app.getHttpServer())
         .get('/queue')
         .expect(200);
 
-      expect(response.body).toHaveLength(2);
-      expect(response.body[0].priority).toBe('urgent');
-      expect(response.body[1].priority).toBe('normal');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(2);
+  expect(response.body.meta.total).toBe(2);
+  expect(response.body.data[0].priority).toBe('urgent');
+  expect(response.body.data[1].priority).toBe('normal');
     });
 
     it('should filter queue entries by status', async () => {
@@ -217,13 +223,16 @@ describe('QueueController (Integration)', () => {
       ];
 
       mockQueryBuilder.getMany.mockResolvedValue(mockFilteredEntries);
+  mockQueryBuilder.getCount.mockResolvedValue(1);
 
       const response = await request(app.getHttpServer())
         .get('/queue?status=waiting')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].status).toBe('waiting');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].status).toBe('waiting');
     });
 
     it('should filter queue entries by priority', async () => {
@@ -239,13 +248,16 @@ describe('QueueController (Integration)', () => {
       ];
 
       mockQueryBuilder.getMany.mockResolvedValue(mockFilteredEntries);
+  mockQueryBuilder.getCount.mockResolvedValue(1);
 
       const response = await request(app.getHttpServer())
         .get('/queue?priority=urgent')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].priority).toBe('urgent');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].priority).toBe('urgent');
     });
 
     it('should search queue entries by patient information', async () => {
@@ -261,13 +273,16 @@ describe('QueueController (Integration)', () => {
       ];
 
       mockQueryBuilder.getMany.mockResolvedValue(mockSearchResults);
+  mockQueryBuilder.getCount.mockResolvedValue(1);
 
       const response = await request(app.getHttpServer())
         .get('/queue?search=John')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].patient.name).toBe('John Doe');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].patient.name).toBe('John Doe');
     });
   });
 

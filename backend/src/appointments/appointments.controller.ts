@@ -62,9 +62,11 @@ export class AppointmentsController {
     return {
       success: true,
       data: result.appointments,
-      pagination: {
+      meta: {
         total: result.total,
         totalPages: result.totalPages,
+        page: Number(query.page) || 1,
+        limit: Number(query.limit) || 10,
       },
     };
   }

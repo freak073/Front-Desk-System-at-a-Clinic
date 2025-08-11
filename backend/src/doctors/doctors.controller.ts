@@ -27,49 +27,60 @@ export class DoctorsController {
   @Post()
   async create(@Body() createDoctorDto: CreateDoctorDto): Promise<DoctorResponseDto> {
     const doctor = await this.doctorsService.create(createDoctorDto);
-    return plainToClass(DoctorResponseDto, doctor);
+    return {
+      // unified envelope
+      success: true,
+      data: plainToClass(DoctorResponseDto, doctor),
+    } as any;
   }
 
   @Get()
-  async findAll(@Query() query: DoctorQueryDto): Promise<DoctorResponseDto[]> {
+  async findAll(@Query() query: DoctorQueryDto): Promise<{ success: true; data: DoctorResponseDto[]; meta: { total: number }; }> {
     const doctors = await this.doctorsService.findAll(query);
-    return doctors.map(doctor => plainToClass(DoctorResponseDto, doctor));
+    return {
+      success: true,
+      data: doctors.map(doctor => plainToClass(DoctorResponseDto, doctor)),
+      meta: { total: doctors.length }
+    };
   }
 
   @Get('available')
-  async findAvailable(): Promise<DoctorResponseDto[]> {
+  async findAvailable(): Promise<{ success: true; data: DoctorResponseDto[]; meta: { total: number }; }> {
     const doctors = await this.doctorsService.findAvailable();
-    return doctors.map(doctor => plainToClass(DoctorResponseDto, doctor));
+    return { success: true, data: doctors.map(doctor => plainToClass(DoctorResponseDto, doctor)), meta: { total: doctors.length } };
   }
 
   @Get('specialization/:specialization')
   async findBySpecialization(
     @Param('specialization') specialization: string,
-  ): Promise<DoctorResponseDto[]> {
+  ): Promise<{ success: true; data: DoctorResponseDto[]; meta: { total: number }; }> {
     const doctors = await this.doctorsService.findBySpecialization(specialization);
-    return doctors.map(doctor => plainToClass(DoctorResponseDto, doctor));
+    return { success: true, data: doctors.map(doctor => plainToClass(DoctorResponseDto, doctor)), meta: { total: doctors.length } };
   }
 
   @Get('location/:location')
   async findByLocation(
     @Param('location') location: string,
-  ): Promise<DoctorResponseDto[]> {
+  ): Promise<{ success: true; data: DoctorResponseDto[]; meta: { total: number }; }> {
     const doctors = await this.doctorsService.findByLocation(location);
-    return doctors.map(doctor => plainToClass(DoctorResponseDto, doctor));
+    return { success: true, data: doctors.map(doctor => plainToClass(DoctorResponseDto, doctor)), meta: { total: doctors.length } };
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<DoctorResponseDto> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     const doctor = await this.doctorsService.findOne(id);
-    return plainToClass(DoctorResponseDto, doctor);
+    return { success: true, data: plainToClass(DoctorResponseDto, doctor) };
   }
 
   @Get(':id/availability')
   async getAvailability(@Param('id', ParseIntPipe) id: number) {
     const availability = await this.doctorsService.getAvailability(id);
     return {
-      doctor: plainToClass(DoctorResponseDto, availability.doctor),
-      nextAvailableTime: availability.nextAvailableTime,
+      success: true,
+      data: {
+        doctor: plainToClass(DoctorResponseDto, availability.doctor),
+        nextAvailableTime: availability.nextAvailableTime,
+      },
     };
   }
 
@@ -77,27 +88,27 @@ export class DoctorsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDoctorDto: UpdateDoctorDto,
-  ): Promise<DoctorResponseDto> {
+  ): Promise<any> {
     const doctor = await this.doctorsService.update(id, updateDoctorDto);
-    return plainToClass(DoctorResponseDto, doctor);
+    return { success: true, data: plainToClass(DoctorResponseDto, doctor) };
   }
 
   @Patch(':id/status')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body('status') status: 'available' | 'busy' | 'off_duty',
-  ): Promise<DoctorResponseDto> {
+  ): Promise<any> {
     const doctor = await this.doctorsService.updateStatus(id, status);
-    return plainToClass(DoctorResponseDto, doctor);
+    return { success: true, data: plainToClass(DoctorResponseDto, doctor) };
   }
 
   @Patch(':id/schedule')
   async updateSchedule(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: UpdateDoctorScheduleDto,
-  ): Promise<DoctorResponseDto> {
+  ): Promise<any> {
     const doctor = await this.doctorsService.updateSchedule(id, body);
-    return plainToClass(DoctorResponseDto, doctor);
+    return { success: true, data: plainToClass(DoctorResponseDto, doctor) };
   }
 
   @Delete(':id')

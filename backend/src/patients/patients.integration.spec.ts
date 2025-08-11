@@ -194,10 +194,12 @@ describe('PatientsController (Integration)', () => {
         .get('/patients')
         .expect(200);
 
-      expect(response.body).toHaveLength(3);
-      expect(response.body[0].name).toBe('Bob Johnson');
-      expect(response.body[1].name).toBe('Jane Smith');
-      expect(response.body[2].name).toBe('John Doe');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(3);
+  expect(response.body.meta.total).toBe(3);
+  expect(response.body.data[0].name).toBe('Bob Johnson');
+  expect(response.body.data[1].name).toBe('Jane Smith');
+  expect(response.body.data[2].name).toBe('John Doe');
     });
 
     it('should filter patients by search term', async () => {
@@ -222,9 +224,11 @@ describe('PatientsController (Integration)', () => {
         .get('/patients?search=John')
         .expect(200);
 
-      expect(response.body).toHaveLength(2);
-      expect(response.body.some(p => p.name === 'John Doe')).toBe(true);
-      expect(response.body.some(p => p.name === 'Bob Johnson')).toBe(true);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(2);
+  expect(response.body.meta.total).toBe(2);
+  expect(response.body.data.some((p: any) => p.name === 'John Doe')).toBe(true);
+  expect(response.body.data.some((p: any) => p.name === 'Bob Johnson')).toBe(true);
     });
 
     it('should filter patients by name', async () => {
@@ -243,8 +247,10 @@ describe('PatientsController (Integration)', () => {
         .get('/patients?name=Jane')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].name).toBe('Jane Smith');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].name).toBe('Jane Smith');
     });
 
     it('should filter patients by medical record number', async () => {
@@ -263,8 +269,10 @@ describe('PatientsController (Integration)', () => {
         .get('/patients?medicalRecordNumber=MRN-001')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].medicalRecordNumber).toBe('MRN-001');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].medicalRecordNumber).toBe('MRN-001');
     });
   });
 
@@ -285,8 +293,10 @@ describe('PatientsController (Integration)', () => {
         .get('/patients/search?q=John')
         .expect(200);
 
-      expect(response.body).toHaveLength(1);
-      expect(response.body[0].name).toBe('John Doe');
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(1);
+  expect(response.body.meta.total).toBe(1);
+  expect(response.body.data[0].name).toBe('John Doe');
     });
 
     it('should return empty array for no matches', async () => {
@@ -296,7 +306,9 @@ describe('PatientsController (Integration)', () => {
         .get('/patients/search?q=NonExistent')
         .expect(200);
 
-      expect(response.body).toHaveLength(0);
+  expect(response.body.success).toBe(true);
+  expect(response.body.data).toHaveLength(0);
+  expect(response.body.meta.total).toBe(0);
     });
   });
 

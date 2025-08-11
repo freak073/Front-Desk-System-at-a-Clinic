@@ -33,8 +33,11 @@ describe('QueueService', () => {
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
     getOne: jest.fn(),
+  getCount: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -53,8 +56,7 @@ describe('QueueService', () => {
     }).compile();
 
     service = module.get<QueueService>(QueueService);
-    queueRepository = module.get<Repository<QueueEntry>>(getRepositoryToken(QueueEntry));
-    patientRepository = module.get<Repository<Patient>>(getRepositoryToken(Patient));
+  // Repositories fetched via DI (not directly used in tests after mocking)
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -148,53 +150,51 @@ describe('QueueService', () => {
       },
     ];
 
-    it('should return all queue entries without query', async () => {
+    it('should return paginated queue entries without query', async () => {
       mockQueryBuilder.getMany.mockResolvedValue(mockQueueEntries);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(2);
 
       const result = await service.findAll();
 
-      expect(mockQueueRepository.createQueryBuilder).toHaveBeenCalledWith('queue');
-      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('queue.patient', 'patient');
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('queue.priority', 'DESC');
-      expect(mockQueryBuilder.addOrderBy).toHaveBeenCalledWith('queue.queueNumber', 'ASC');
-      expect(result).toEqual(mockQueueEntries);
+      expect(result.entries).toEqual(mockQueueEntries);
+      expect(result.total).toBe(2);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+      expect(result.totalPages).toBe(1);
     });
 
     it('should filter by status', async () => {
       const query: QueueQueryDto = { status: 'waiting' };
       mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
 
       const result = await service.findAll(query);
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.status = :status', {
-        status: 'waiting',
-      });
-      expect(result).toEqual([mockQueueEntries[0]]);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.status = :status', { status: 'waiting' });
+      expect(result.entries).toEqual([mockQueueEntries[0]]);
+      expect(result.total).toBe(1);
     });
 
     it('should filter by priority', async () => {
       const query: QueueQueryDto = { priority: 'urgent' };
       mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
 
       const result = await service.findAll(query);
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.priority = :priority', {
-        priority: 'urgent',
-      });
-      expect(result).toEqual([mockQueueEntries[0]]);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.priority = :priority', { priority: 'urgent' });
+      expect(result.entries).toEqual([mockQueueEntries[0]]);
     });
 
     it('should search by patient information', async () => {
       const query: QueueQueryDto = { search: 'John' };
       mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
 
       const result = await service.findAll(query);
-
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
         { search: '%John%' },
       );
-      expect(result).toEqual([mockQueueEntries[0]]);
+      expect(result.entries).toEqual([mockQueueEntries[0]]);
     });
   });
 

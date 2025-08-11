@@ -62,7 +62,7 @@ export class QueueService {
     }
   }
 
-  async findAll(query?: QueueQueryDto): Promise<QueueEntry[]> {
+  async findAll(query?: QueueQueryDto): Promise<{ entries: QueueEntry[]; total: number; page: number; limit: number; totalPages: number; }> {
     const queryBuilder = this.queueRepository.createQueryBuilder('queue')
       .leftJoinAndSelect('queue.patient', 'patient');
 
@@ -87,10 +87,21 @@ export class QueueService {
       });
     }
 
-    return await queryBuilder
-      .orderBy('queue.priority', 'DESC') // Urgent first
-      .addOrderBy('queue.queueNumber', 'ASC') // Then by queue number
-      .getMany();
+    // Ordering
+    queryBuilder
+      .orderBy('queue.priority', 'DESC')
+      .addOrderBy('queue.queueNumber', 'ASC');
+
+    const page = query?.page && query.page > 0 ? query.page : 1;
+    const limit = query?.limit && query.limit > 0 ? query.limit : 10;
+    const offset = (page - 1) * limit;
+
+  // Count total BEFORE applying pagination (query builder state unchanged yet)
+  const total = await queryBuilder.getCount();
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const entries = await queryBuilder.skip(offset).take(limit).getMany();
+    return { entries, total, page, limit, totalPages };
   }
 
   async findOne(id: number): Promise<QueueEntry> {
@@ -136,7 +147,7 @@ export class QueueService {
       await this.updateEstimatedWaitTimes();
       
       return await this.findOne(updatedEntry.id);
-    } catch (error) {
+  } catch {
       throw new BadRequestException('Failed to update queue entry');
     }
   }

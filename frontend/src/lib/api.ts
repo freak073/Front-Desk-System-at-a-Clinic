@@ -79,7 +79,7 @@ export interface LoginResponse {
 }
 
 export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;
@@ -96,7 +96,8 @@ function normalizeResponse<T>(raw: any): ApiResponse<T> {
   }
   // If looks like envelope with data but no success property
   if (raw && typeof raw === 'object' && 'data' in raw && !Array.isArray(raw)) {
-    return { success: true, ...(raw as object) } as ApiResponse<T>;
+    const base: any = { success: true, ...raw };
+    return base as ApiResponse<T>;
   }
   // Otherwise wrap raw payload (array, object, primitive) into data
   return { success: true, data: raw as T };

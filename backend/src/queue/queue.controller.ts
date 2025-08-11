@@ -27,53 +27,67 @@ export class QueueController {
   @Post()
   async addToQueue(@Body() createQueueEntryDto: CreateQueueEntryDto): Promise<QueueEntryResponseDto> {
     const queueEntry = await this.queueService.addToQueue(createQueueEntryDto);
-    return plainToClass(QueueEntryResponseDto, queueEntry);
+  return { success: true, data: plainToClass(QueueEntryResponseDto, queueEntry) } as any;
   }
 
   @Get()
-  async findAll(@Query() query: QueueQueryDto): Promise<QueueEntryResponseDto[]> {
-    const queueEntries = await this.queueService.findAll(query);
-    return queueEntries.map(entry => plainToClass(QueueEntryResponseDto, entry));
+  async findAll(@Query() query: QueueQueryDto): Promise<{ success: true; data: QueueEntryResponseDto[]; meta: any; }> {
+    const result = await this.queueService.findAll(query);
+    return {
+      success: true,
+      data: result.entries.map(entry => plainToClass(QueueEntryResponseDto, entry)),
+      meta: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      },
+    };
   }
 
   @Get('current')
-  async getCurrentQueue(): Promise<QueueEntryResponseDto[]> {
+  async getCurrentQueue(): Promise<any> {
     const queueEntries = await this.queueService.getCurrentQueue();
-    return queueEntries.map(entry => plainToClass(QueueEntryResponseDto, entry));
+    return {
+      success: true,
+      data: queueEntries.map(entry => plainToClass(QueueEntryResponseDto, entry)),
+      meta: { total: queueEntries.length },
+    };
   }
 
   @Get('stats')
   async getQueueStats() {
-    return await this.queueService.getQueueStats();
+    const stats = await this.queueService.getQueueStats();
+    return { success: true, data: stats };
   }
 
   @Get('search')
-  async searchQueue(@Query('q') searchTerm: string): Promise<QueueEntryResponseDto[]> {
+  async searchQueue(@Query('q') searchTerm: string): Promise<any> {
     const queueEntries = await this.queueService.searchQueue(searchTerm);
-    return queueEntries.map(entry => plainToClass(QueueEntryResponseDto, entry));
+    return { success: true, data: queueEntries.map(entry => plainToClass(QueueEntryResponseDto, entry)), meta: { total: queueEntries.length } };
   }
 
   @Get('number/:queueNumber')
   async findByQueueNumber(
     @Param('queueNumber', ParseIntPipe) queueNumber: number,
-  ): Promise<QueueEntryResponseDto> {
+  ): Promise<any> {
     const queueEntry = await this.queueService.findByQueueNumber(queueNumber);
-    return plainToClass(QueueEntryResponseDto, queueEntry);
+    return { success: true, data: plainToClass(QueueEntryResponseDto, queueEntry) };
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<QueueEntryResponseDto> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     const queueEntry = await this.queueService.findOne(id);
-    return plainToClass(QueueEntryResponseDto, queueEntry);
+    return { success: true, data: plainToClass(QueueEntryResponseDto, queueEntry) };
   }
 
   @Patch(':id')
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateQueueEntryDto: UpdateQueueEntryDto,
-  ): Promise<QueueEntryResponseDto> {
+  ): Promise<any> {
     const queueEntry = await this.queueService.updateStatus(id, updateQueueEntryDto);
-    return plainToClass(QueueEntryResponseDto, queueEntry);
+    return { success: true, data: plainToClass(QueueEntryResponseDto, queueEntry) };
   }
 
   @Delete(':id')

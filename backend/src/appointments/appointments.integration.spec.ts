@@ -229,8 +229,8 @@ describe("AppointmentsController (Integration)", () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeInstanceOf(Array);
       expect(response.body.data.length).toBe(1);
-      expect(response.body.pagination).toHaveProperty("total");
-      expect(response.body.pagination).toHaveProperty("totalPages");
+  expect(response.body.meta).toHaveProperty("total");
+  expect(response.body.meta).toHaveProperty("totalPages");
     });
 
     it("should filter appointments by status", async () => {

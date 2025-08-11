@@ -84,11 +84,13 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-      expect(response.body[0]).toHaveProperty('id');
-      expect(response.body[0]).toHaveProperty('name');
-      expect(response.body[0]).toHaveProperty('specialization');
+  expect(response.body.success).toBe(true);
+  expect(Array.isArray(response.body.data)).toBe(true);
+  expect(response.body.data.length).toBeGreaterThan(0);
+  expect(response.body.meta.total).toBeGreaterThan(0);
+  expect(response.body.data[0]).toHaveProperty('id');
+  expect(response.body.data[0]).toHaveProperty('name');
+  expect(response.body.data[0]).toHaveProperty('specialization');
     });
 
     it('should filter doctors by specialization', async () => {
@@ -96,8 +98,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors?specialization=Cardiology')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.specialization).toBe('Cardiology');
       });
     });
@@ -107,8 +110,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors?status=available')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.status).toBe('available');
       });
     });
@@ -118,8 +122,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors?search=John')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.name.toLowerCase()).toContain('john');
       });
     });
@@ -131,8 +136,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors/available')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.status).toBe('available');
       });
     });
@@ -144,8 +150,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors/specialization/Cardiology')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.specialization).toBe('Cardiology');
       });
     });
@@ -157,8 +164,9 @@ describe('DoctorsController (Integration)', () => {
         .get('/doctors/location/Building A, Room 101')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((doctor) => {
+      expect(response.body.success).toBe(true);
+      expect(Array.isArray(response.body.data)).toBe(true);
+      response.body.data.forEach((doctor: any) => {
         expect(doctor.location).toBe('Building A, Room 101');
       });
     });

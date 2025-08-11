@@ -27,58 +27,62 @@ export class PatientsController {
   @Post()
   async create(@Body() createPatientDto: CreatePatientDto): Promise<PatientResponseDto> {
     const patient = await this.patientsService.create(createPatientDto);
-    return plainToClass(PatientResponseDto, patient);
+  return { success: true, data: plainToClass(PatientResponseDto, patient) } as any;
   }
 
   @Get()
-  async findAll(@Query() query: PatientQueryDto): Promise<PatientResponseDto[]> {
+  async findAll(@Query() query: PatientQueryDto): Promise<{ success: true; data: PatientResponseDto[]; meta: { total: number }; }> {
     const patients = await this.patientsService.findAll(query);
     if (process.env.NODE_ENV !== 'test') {
       console.log(`[PatientsController] findAll returned ${patients.length} patients`);
     }
-    return patients.map(patient => plainToClass(PatientResponseDto, patient));
+    return {
+      success: true,
+      data: patients.map(patient => plainToClass(PatientResponseDto, patient)),
+      meta: { total: patients.length }
+    };
   }
 
   @Get('search')
-  async search(@Query('q') searchTerm: string): Promise<PatientResponseDto[]> {
+  async search(@Query('q') searchTerm: string): Promise<{ success: true; data: PatientResponseDto[]; meta: { total: number }; }> {
     const patients = await this.patientsService.search(searchTerm);
-    return patients.map(patient => plainToClass(PatientResponseDto, patient));
+    return { success: true, data: patients.map(patient => plainToClass(PatientResponseDto, patient)), meta: { total: patients.length } };
   }
 
   @Get('medical-record/:medicalRecordNumber')
   async findByMedicalRecordNumber(
     @Param('medicalRecordNumber') medicalRecordNumber: string,
-  ): Promise<PatientResponseDto> {
+  ): Promise<any> {
     const patient = await this.patientsService.findByMedicalRecordNumber(medicalRecordNumber);
-    return plainToClass(PatientResponseDto, patient);
+    return { success: true, data: plainToClass(PatientResponseDto, patient) };
   }
 
   @Get('validate-medical-record/:medicalRecordNumber')
   async validateMedicalRecordNumber(
     @Param('medicalRecordNumber') medicalRecordNumber: string,
     @Query('excludeId') excludeId?: string,
-  ): Promise<{ isValid: boolean }> {
+  ): Promise<any> {
     const excludeIdNumber = excludeId ? parseInt(excludeId, 10) : undefined;
     const isValid = await this.patientsService.validateMedicalRecordNumber(
       medicalRecordNumber,
       excludeIdNumber,
     );
-    return { isValid };
+    return { success: true, data: { isValid } };
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<PatientResponseDto> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     const patient = await this.patientsService.findOne(id);
-    return plainToClass(PatientResponseDto, patient);
+    return { success: true, data: plainToClass(PatientResponseDto, patient) };
   }
 
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePatientDto: UpdatePatientDto,
-  ): Promise<PatientResponseDto> {
+  ): Promise<any> {
     const patient = await this.patientsService.update(id, updatePatientDto);
-    return plainToClass(PatientResponseDto, patient);
+    return { success: true, data: plainToClass(PatientResponseDto, patient) };
   }
 
   @Delete(':id')
