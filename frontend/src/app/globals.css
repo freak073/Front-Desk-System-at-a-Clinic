@@ -237,6 +237,44 @@
     @apply py-4 mobile:py-3;
   }
 
+  /* Modern UI Animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+    }
+    33% {
+      transform: translateY(-10px) rotate(120deg);
+    }
+    66% {
+      transform: translateY(5px) rotate(240deg);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+
+  /* Glassmorphism Effects */
+  .glass-card {
+    @apply backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl;
+  }
+
+  .glass-input {
+    @apply bg-black/20 border border-gray-600/50 rounded-lg backdrop-blur-sm;
+  }
+
+  .glass-button {
+    @apply backdrop-blur-sm border border-white/20;
+  }
+
   /* Card Layouts */
   .responsive-card-stack {
     @apply flex flex-col space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3;

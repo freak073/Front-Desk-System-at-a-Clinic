@@ -46,16 +46,16 @@ describe('Signup Functionality', () => {
     renderLoginPage();
     
     // Initially should be in login mode
-    expect(screen.getByText('Login to Front Desk System')).toBeInTheDocument();
-    expect(screen.getByText('Login')).toBeInTheDocument();
+    expect(screen.getByText('Front Desk System')).toBeInTheDocument();
+    expect(screen.getByText('Login to Dashboard')).toBeInTheDocument();
     
     // Click signup toggle
     fireEvent.click(screen.getByText('Need an account? Sign up here'));
     
     // Should switch to signup mode
-    expect(screen.getByText('Create Account')).toBeInTheDocument();
-    expect(screen.getByText('Create Account', { selector: 'button' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Full Name (Optional)')).toBeInTheDocument();
+    expect(screen.getByText('Front Desk System')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email*')).toBeInTheDocument();
     expect(screen.getByLabelText('Role')).toBeInTheDocument();
   });
 
@@ -66,9 +66,9 @@ describe('Signup Functionality', () => {
     fireEvent.click(screen.getByText('Need an account? Sign up here'));
     
     // Check all signup fields are present
-    expect(screen.getByLabelText('Username')).toBeInTheDocument();
-    expect(screen.getByLabelText('Password')).toBeInTheDocument();
-    expect(screen.getByLabelText('Full Name (Optional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name*')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password*')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email*')).toBeInTheDocument();
     expect(screen.getByLabelText('Role')).toBeInTheDocument();
     
     // Check role options
@@ -85,41 +85,41 @@ describe('Signup Functionality', () => {
     fireEvent.click(screen.getByText('Need an account? Sign up here'));
     
     // Try to submit empty form
-    fireEvent.click(screen.getByText('Create Account', { selector: 'button' }));
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     
     await waitFor(() => {
       expect(screen.getByText('Please enter both username and password.')).toBeInTheDocument();
     });
     
     // Test short username
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'ab' } });
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Password123' } });
-    fireEvent.click(screen.getByText('Create Account', { selector: 'button' }));
+    fireEvent.change(screen.getByLabelText('Name*'), { target: { value: 'ab' } });
+    fireEvent.change(screen.getByLabelText('Password*'), { target: { value: 'Password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     
     await waitFor(() => {
       expect(screen.getByText('Username must be at least 3 characters long.')).toBeInTheDocument();
     });
     
     // Test invalid username characters
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'user-name!' } });
-    fireEvent.click(screen.getByText('Create Account', { selector: 'button' }));
+    fireEvent.change(screen.getByLabelText('Name*'), { target: { value: 'user-name!' } });
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     
     await waitFor(() => {
       expect(screen.getByText('Username can only contain letters, numbers, and underscores.')).toBeInTheDocument();
     });
     
     // Test weak password
-    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'validuser' } });
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'weak' } });
-    fireEvent.click(screen.getByText('Create Account', { selector: 'button' }));
+    fireEvent.change(screen.getByLabelText('Name*'), { target: { value: 'validuser' } });
+    fireEvent.change(screen.getByLabelText('Password*'), { target: { value: 'weak' } });
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     
     await waitFor(() => {
       expect(screen.getByText('Password must be at least 6 characters long.')).toBeInTheDocument();
     });
     
     // Test password without required characters
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByText('Create Account', { selector: 'button' }));
+    fireEvent.change(screen.getByLabelText('Password*'), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     
     await waitFor(() => {
       expect(screen.getByText('Password must contain at least one uppercase letter, one lowercase letter, and one number.')).toBeInTheDocument();
@@ -133,7 +133,7 @@ describe('Signup Functionality', () => {
     fireEvent.click(screen.getByText('Need an account? Sign up here'));
     
     // Check password requirements are shown
-    expect(screen.getByText('Must be at least 6 characters with uppercase, lowercase, and number')).toBeInTheDocument();
+    expect(screen.getByText('Must be at least 9 characters.')).toBeInTheDocument();
   });
 
   it('should toggle back to login mode', () => {
@@ -141,15 +141,15 @@ describe('Signup Functionality', () => {
     
     // Switch to signup mode
     fireEvent.click(screen.getByText('Need an account? Sign up here'));
-    expect(screen.getByText('Create Account')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
     
     // Switch back to login mode
-    fireEvent.click(screen.getByText('Already have an account? Login here'));
-    expect(screen.getByText('Login to Front Desk System')).toBeInTheDocument();
-    expect(screen.getByText('Login', { selector: 'button' })).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Already have an account? Sign in'));
+    expect(screen.getByText('Front Desk System')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /login to dashboard/i })).toBeInTheDocument();
     
     // Signup fields should be hidden
-    expect(screen.queryByLabelText('Full Name (Optional)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Email*')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Role')).not.toBeInTheDocument();
   });
 
@@ -158,7 +158,6 @@ describe('Signup Functionality', () => {
     
     // Should show default credentials in login mode
     expect(screen.getByText('Default credentials:')).toBeInTheDocument();
-    expect(screen.getByText('Admin: admin / Admin123')).toBeInTheDocument();
     expect(screen.getByText('Staff: staff / Staff123')).toBeInTheDocument();
     
     // Switch to signup mode

@@ -20,6 +20,8 @@ import { apiService } from '../../../lib/api';
 import { highlightMatch } from '../../components/highlight';
 import FilterBar from '../../components/FilterBar';
 import SearchResults from '../../components/SearchResults';
+import Header from '../../components/Header';
+import NavigationTabs from '../../components/NavigationTabs';
 
 const QueueManagementPage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -231,331 +233,491 @@ const QueueManagementPage = () => {
   }
 
   return (
-    <div className="responsive-container text-gray-200">
-      <div className="flex flex-col space-y-4 mb-6 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <div className="flex items-center responsive-space-x-4">
-          <h1 className="responsive-text-2xl font-semibold text-gray-100">Queue Management</h1>
-          <SyncStatusIndicator dataType="queue" showLabel />
+    <div className="min-h-screen bg-black text-gray-100 relative overflow-hidden">
+      {/* Vanta Black Background with Purple Accents */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
+        {/* Animated gradient orbs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/8 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-violet-600/6 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-1/4 left-1/2 w-72 h-72 bg-indigo-600/4 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.02)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+        
+        {/* Floating particles */}
+        <div className="absolute inset-0">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-purple-400/15 rounded-full animate-float"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${4 + Math.random() * 3}s`
+              }}
+            ></div>
+          ))}
         </div>
       </div>
 
-      {/* Enhanced Filters */}
-      <FilterBar
-        search={{
-          placeholder: 'Search patients by name...',
-          value: searchTerm,
-          onChange: setSearchTerm,
-          showSearchIcon: true
-        }}
-        selects={[
-          {
-            id: 'status',
-            label: 'Status',
-            value: filters.status || 'all',
-            onChange: (value) => setFilter('status', value),
-            options: statusOptions,
-            showCounts: true
-          },
-          {
-            id: 'priority',
-            label: 'Priority',
-            value: filters.priority || 'all',
-            onChange: (value) => setFilter('priority', value),
-            options: priorityOptions,
-            showCounts: true
-          }
-        ]}
-        onClear={clearFilters}
-        onClearAll={clearAll}
-        showResultCount={true}
-        resultCount={resultCount}
-        isFiltered={isFiltered}
-        loading={isLoading}
-      />
+      <div className="relative z-10">
+        <Header />
+        
+        <div className="responsive-container">
+          <div className="flex flex-col space-y-6 mb-8 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+                  Queue Management
+                </h1>
+                <p className="text-purple-300 text-sm mt-1">Manage patient queue and appointments</p>
+              </div>
+              <SyncStatusIndicator dataType="queue" showLabel />
+            </div>
+          </div>
 
-      {/* Queue List with Enhanced Search Results */}
-      <SearchResults
-        data={filteredQueueEntries}
-        searchTerm={debouncedSearchTerm}
-        isFiltered={isFiltered}
-        loading={isLoading}
-        emptyStateTitle="Queue is empty"
-        emptyStateMessage="No patients are currently in the queue. Add a patient to get started."
-        noResultsTitle="No patients found"
-        noResultsMessage="No patients match your search criteria. Try adjusting your filters or search terms."
-        showResultCount={false}
-        renderItem={(entry: any, index: number, searchTerm: string) => (
-          <div key={entry.id} className="responsive-card">
-            {/* Mobile Layout */}
-            <div className="md:hidden space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-xl font-bold text-gray-100 bg-accent-600 rounded-full w-8 h-8 flex items-center justify-center text-sm">
-                    {entry.queueNumber}
-                  </span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-gray-100 text-sm">
-                        {highlightMatch(entry.patient?.name || 'N/A', searchTerm)}
-                      </span>
-                      {entry.priority === 'urgent' && (
-                        <span className="inline-flex items-center">
-                          <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRemovePatient(entry.id)}
-                  className="touch-target text-red-400 hover:text-red-300 hover:bg-red-600/10 rounded"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          <NavigationTabs />
+
+        {/* Enhanced Filters */}
+        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl shadow-purple-500/5 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2">
+              <label htmlFor="search" className="block text-sm font-medium text-purple-200/90 mb-2">
+                Search Patients
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="search"
+                  placeholder="Search patients by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-4 py-3 pl-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm"
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                  <svg className="w-5 h-5 text-purple-300/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-purple-200/90 mb-2">
+                Status
+              </label>
+              <div className="relative">
+                <select
+                  id="status"
+                  value={filters.status || 'all'}
+                  onChange={(e) => setFilter('status', e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value} className="bg-slate-800 text-white">
+                      {option.label} ({option.count})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-5 h-5 text-purple-300/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Priority Filter */}
+            <div>
+              <label htmlFor="priority" className="block text-sm font-medium text-purple-200/90 mb-2">
+                Priority
+              </label>
+              <div className="relative">
+                <select
+                  id="priority"
+                  value={filters.priority || 'all'}
+                  onChange={(e) => setFilter('priority', e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                >
+                  {priorityOptions.map(option => (
+                    <option key={option.value} value={option.value} className="bg-slate-800 text-white">
+                      {option.label} ({option.count})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-5 h-5 text-purple-300/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Actions */}
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+            <div className="flex items-center space-x-4">
+              {isFiltered && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-purple-300 hover:bg-white/20 transition-all duration-200 text-sm font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Clear Filters</span>
                 </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-400">Arrival:</span>
-                  <div className="text-gray-200">{new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                </div>
-                <div>
-                  <span className="text-gray-400">Est. Wait:</span>
-                  <div className="text-gray-200">{entry.estimatedWaitTime} min</div>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Status</label>
-                  <select
-                    value={entry.status}
-                    onChange={(e) => handleStatusChange(entry.id, e.target.value)}
-                    className="touch-input w-full bg-surface-700 border-gray-600 text-gray-200"
-                  >
-                    <option value="waiting">⏳ Waiting</option>
-                    <option value="with_doctor">👨‍⚕️ With Doctor</option>
-                    <option value="completed">✅ Completed</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Priority</label>
-                  <select
-                    value={entry.priority}
-                    onChange={async (e) => {
-                      try {
-                        const updateData: UpdateQueueEntryDto = { priority: e.target.value as 'normal' | 'urgent' };
-                        await updateQueueEntryStatus(entry.id, updateData);
-                        showSuccess('Priority updated');
-                        refetch();
-                      } catch {
-                        showError('Failed to update priority');
-                      }
-                    }}
-                    className="touch-input w-full bg-surface-700 border-gray-600 text-gray-200"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="urgent">🚨 Urgent</option>
-                  </select>
-                </div>
-              </div>
+              )}
             </div>
-
-            {/* Desktop Layout */}
-            <div className="hidden md:flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl font-bold text-gray-100">{entry.queueNumber}</span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-gray-100">
-                        {highlightMatch(entry.patient?.name || 'N/A', searchTerm)}
-                      </span>
-                      {entry.priority === 'urgent' && (
-                        <span className="inline-flex items-center">
-                          <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-1 text-sm text-gray-400">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        entry.status === 'waiting' ? 'bg-yellow-600/20 text-yellow-300' :
-                        entry.status === 'with_doctor' ? 'bg-blue-600/20 text-blue-300' :
-                        'bg-green-600/20 text-green-300'
-                      }`}>
-                        {entry.status === 'waiting' ? '⏳ Waiting' :
-                         entry.status === 'with_doctor' ? '👨‍⚕️ With Doctor' :
-                         '✅ Completed'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-6">
-                <div className="text-right text-sm">
-                  <div className="text-gray-300">
-                    <span className="font-medium">Arrival:</span> {new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div className="text-gray-400">
-                    <span className="font-medium">Est. Wait:</span> {entry.estimatedWaitTime} min
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <select
-                    value={entry.status}
-                    onChange={(e) => handleStatusChange(entry.id, e.target.value)}
-                    className="px-3 py-1 text-sm border border-gray-600 rounded bg-surface-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent-500 desktop:hover:border-gray-500 desktop:hover:shadow-sm transition-all duration-200"
-                  >
-                    <option value="waiting">Waiting</option>
-                    <option value="with_doctor">With Doctor</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                  
-                  <select
-                    value={entry.priority}
-                    onChange={async (e) => {
-                      try {
-                        const updateData: UpdateQueueEntryDto = { priority: e.target.value as 'normal' | 'urgent' };
-                        await updateQueueEntryStatus(entry.id, updateData);
-                        showSuccess('Priority updated');
-                        refetch();
-                      } catch {
-                        showError('Failed to update priority');
-                      }
-                    }}
-                    className="px-3 py-1 text-sm border border-gray-600 rounded bg-surface-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent-500 desktop:hover:border-gray-500 desktop:hover:shadow-sm transition-all duration-200"
-                  >
-                    <option value="normal">Normal</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                  
-                  <button
-                    onClick={() => handleRemovePatient(entry.id)}
-                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-600/10 rounded desktop:hover:shadow-sm transition-all duration-200"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+            <div className="text-sm text-purple-300/80">
+              {resultCount} of {localQueue.length} patients
             </div>
-          </div>
-        )}
-        className="space-y-4 mb-6"
-      />
-
-      {/* Add New Patient Button */}
-      <LoadingButton
-        isLoading={addPatientMutation.isLoading || globalIsLoading('queue')}
-        onClick={() => setShowAddModal(true)}
-        className="w-full touch-button bg-surface-700 hover:bg-surface-600 text-gray-200 rounded-lg border border-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 desktop:hover:shadow-md desktop:hover:scale-105"
-        loadingText="Processing..."
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-        </svg>
-        Add New Patient to Queue
-      </LoadingButton>
-
-      <SearchablePagination
-        pagination={{
-          page,
-          pageSize,
-          total: totalQueue,
-          totalPages: Math.ceil(totalQueue / pageSize),
-          pageNumbers: Array.from({ length: Math.min(5, Math.ceil(totalQueue / pageSize)) }, (_, i) => i + 1),
-          nextPage: () => { setPage(p => p + 1); refetch(); },
-          prevPage: () => { setPage(p => p - 1); refetch(); },
-          goToPage: (p: number) => { setPage(p); refetch(); },
-          setPageSize: (size: number) => { setPageSize(size); setPage(1); refetch(); },
-          canNextPage: page < Math.ceil(totalQueue / pageSize),
-          canPrevPage: page > 1
-        }}
-        totalResults={totalQueue}
-        filteredResults={resultCount}
-        isFiltered={isFiltered}
-        searchTerm={debouncedSearchTerm}
-        showResultSummary={true}
-      />
-
-      {/* Add Patient Modal */}
-      <Modal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Add Patient to Queue"
-      >
-        <div className="space-y-4">
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-gray-700">Select Existing Patient</legend>
-            <select
-              value={selectedExistingPatientId}
-              onChange={(e) => setSelectedExistingPatientId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">-- None --</option>
-              {availablePatients.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </fieldset>
-          <div>
-            <label htmlFor="patientName" className="block text-sm font-medium text-gray-700 mb-1">
-              Or Create New Patient
-            </label>
-            <input
-              type="text"
-              id="patientName"
-              value={newPatientName}
-              onChange={(e) => setNewPatientName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter patient name"
-            />
-          </div>
-          <div>
-            <label htmlFor="prioritySelect" className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-            <select
-              id="prioritySelect"
-              value={priorityValue}
-              onChange={(e) => setPriorityValue(e.target.value as 'normal' | 'urgent')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="normal">Normal</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              onClick={() => setShowAddModal(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-200 bg-surface-700 border border-gray-600 rounded-md hover:bg-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500"
-            >
-              Cancel
-            </button>
-            <LoadingButton
-              isLoading={addPatientMutation.isLoading}
-              onClick={handleAddPatient}
-              disabled={!(newPatientName.trim() || selectedExistingPatientId)}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                !(newPatientName.trim() || selectedExistingPatientId)
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-              loadingText="Adding..."
-            >
-              Add to Queue
-            </LoadingButton>
           </div>
         </div>
-      </Modal>
+
+          {/* Queue List with Enhanced Search Results */}
+          <div className="space-y-4 mb-8">
+            {filteredQueueEntries.length === 0 ? (
+              <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-12 text-center shadow-2xl shadow-purple-500/5">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {isFiltered ? 'No patients found' : 'Queue is empty'}
+                </h3>
+                <p className="text-gray-300">
+                  {isFiltered 
+                    ? 'No patients match your search criteria. Try adjusting your filters or search terms.'
+                    : 'No patients are currently in the queue. Add a patient to get started.'
+                  }
+                </p>
+              </div>
+            ) : (
+              filteredQueueEntries.map((entry: any, index: number) => (
+                <div key={entry.id} className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl shadow-purple-500/5 hover:bg-white/10 transition-all duration-300">
+                  {/* Mobile Layout */}
+                  <div className="md:hidden space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+                          <span className="text-lg font-bold text-white">
+                            {entry.queueNumber}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold text-white text-lg">
+                              {highlightMatch(entry.patient?.name || 'N/A', debouncedSearchTerm)}
+                            </span>
+                            {entry.priority === 'urgent' && (
+                              <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center">
+                                <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                              entry.status === 'waiting' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                              entry.status === 'with_doctor' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                              'bg-green-500/20 text-green-300 border border-green-500/30'
+                            }`}>
+                              {entry.status === 'waiting' ? '⏳ Waiting' :
+                               entry.status === 'with_doctor' ? '👨‍⚕️ With Doctor' :
+                               '✅ Completed'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemovePatient(entry.id)}
+                        className="w-10 h-10 bg-red-500/20 hover:bg-red-500/30 rounded-xl flex items-center justify-center text-red-400 hover:text-red-300 transition-all duration-200"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-xl border border-white/5">
+                      <div>
+                        <span className="text-purple-300 text-sm font-medium">Arrival Time</span>
+                        <div className="text-white font-semibold">{new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                      <div>
+                        <span className="text-purple-300 text-sm font-medium">Est. Wait</span>
+                        <div className="text-white font-semibold">{entry.estimatedWaitTime} min</div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-purple-200/90 mb-2">Status</label>
+                        <select
+                          value={entry.status}
+                          onChange={(e) => handleStatusChange(entry.id, e.target.value)}
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                        >
+                          <option value="waiting" className="bg-slate-800">⏳ Waiting</option>
+                          <option value="with_doctor" className="bg-slate-800">👨‍⚕️ With Doctor</option>
+                          <option value="completed" className="bg-slate-800">✅ Completed</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-purple-200/90 mb-2">Priority</label>
+                        <select
+                          value={entry.priority}
+                          onChange={async (e) => {
+                            try {
+                              const updateData: UpdateQueueEntryDto = { priority: e.target.value as 'normal' | 'urgent' };
+                              await updateQueueEntryStatus(entry.id, updateData);
+                              showSuccess('Priority updated');
+                              refetch();
+                            } catch {
+                              showError('Failed to update priority');
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                        >
+                          <option value="normal" className="bg-slate-800">Normal</option>
+                          <option value="urgent" className="bg-slate-800">🚨 Urgent</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className="hidden md:flex items-center justify-between">
+                    <div className="flex items-center space-x-6">
+                      <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+                        <span className="text-2xl font-bold text-white">{entry.queueNumber}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-3">
+                          <span className="font-semibold text-white text-xl">
+                            {highlightMatch(entry.patient?.name || 'N/A', debouncedSearchTerm)}
+                          </span>
+                          {entry.priority === 'urgent' && (
+                            <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                              <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                            entry.status === 'waiting' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                            entry.status === 'with_doctor' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                            'bg-green-500/20 text-green-300 border border-green-500/30'
+                          }`}>
+                            {entry.status === 'waiting' ? '⏳ Waiting' :
+                             entry.status === 'with_doctor' ? '👨‍⚕️ With Doctor' :
+                             '✅ Completed'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-8">
+                      <div className="text-right">
+                        <div className="text-purple-300 text-sm font-medium">Arrival Time</div>
+                        <div className="text-white font-semibold">{new Date(entry.arrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div className="text-purple-300 text-sm font-medium mt-1">Est. Wait</div>
+                        <div className="text-white font-semibold">{entry.estimatedWaitTime} min</div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        <select
+                          value={entry.status}
+                          onChange={(e) => handleStatusChange(entry.id, e.target.value)}
+                          className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                        >
+                          <option value="waiting" className="bg-slate-800">Waiting</option>
+                          <option value="with_doctor" className="bg-slate-800">With Doctor</option>
+                          <option value="completed" className="bg-slate-800">Completed</option>
+                        </select>
+                        
+                        <select
+                          value={entry.priority}
+                          onChange={async (e) => {
+                            try {
+                              const updateData: UpdateQueueEntryDto = { priority: e.target.value as 'normal' | 'urgent' };
+                              await updateQueueEntryStatus(entry.id, updateData);
+                              showSuccess('Priority updated');
+                              refetch();
+                            } catch {
+                              showError('Failed to update priority');
+                            }
+                          }}
+                          className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                        >
+                          <option value="normal" className="bg-slate-800">Normal</option>
+                          <option value="urgent" className="bg-slate-800">Urgent</option>
+                        </select>
+                        
+                        <button
+                          onClick={() => handleRemovePatient(entry.id)}
+                          className="w-10 h-10 bg-red-500/20 hover:bg-red-500/30 rounded-xl flex items-center justify-center text-red-400 hover:text-red-300 transition-all duration-200"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Add New Patient Button */}
+          <LoadingButton
+            isLoading={addPatientMutation.isLoading || globalIsLoading('queue')}
+            onClick={() => setShowAddModal(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-purple-500/20"
+            loadingText="Processing..."
+          >
+            <div className="flex items-center justify-center space-x-3">
+              <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <span>Add New Patient to Queue</span>
+            </div>
+          </LoadingButton>
+
+          <SearchablePagination
+            pagination={{
+              page,
+              pageSize,
+              total: totalQueue,
+              totalPages: Math.ceil(totalQueue / pageSize),
+              pageNumbers: Array.from({ length: Math.min(5, Math.ceil(totalQueue / pageSize)) }, (_, i) => i + 1),
+              nextPage: () => { setPage(p => p + 1); refetch(); },
+              prevPage: () => { setPage(p => p - 1); refetch(); },
+              goToPage: (p: number) => { setPage(p); refetch(); },
+              setPageSize: (size: number) => { setPageSize(size); setPage(1); refetch(); },
+              canNextPage: page < Math.ceil(totalQueue / pageSize),
+              canPrevPage: page > 1
+            }}
+            totalResults={totalQueue}
+            filteredResults={resultCount}
+            isFiltered={isFiltered}
+            searchTerm={debouncedSearchTerm}
+            showResultSummary={true}
+          />
+
+          {/* Add Patient Modal */}
+          <Modal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            title="Add Patient to Queue"
+          >
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-purple-200/90 mb-2">Select Existing Patient</label>
+                <div className="relative">
+                  <select
+                    value={selectedExistingPatientId}
+                    onChange={(e) => setSelectedExistingPatientId(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                  >
+                    <option value="" className="bg-slate-800">-- Select Patient --</option>
+                    {availablePatients.map(p => (
+                      <option key={p.id} value={p.id} className="bg-slate-800">{p.name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-purple-300/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 bg-transparent text-purple-300/60">Or create new patient</span>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="patientName" className="block text-sm font-medium text-purple-200/90 mb-2">
+                  Patient Name
+                </label>
+                <input
+                  type="text"
+                  id="patientName"
+                  value={newPatientName}
+                  onChange={(e) => setNewPatientName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm"
+                  placeholder="Enter patient name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="prioritySelect" className="block text-sm font-medium text-purple-200/90 mb-2">Priority Level</label>
+                <div className="relative">
+                  <select
+                    id="prioritySelect"
+                    value={priorityValue}
+                    onChange={(e) => setPriorityValue(e.target.value as 'normal' | 'urgent')}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer"
+                  >
+                    <option value="normal" className="bg-slate-800">Normal Priority</option>
+                    <option value="urgent" className="bg-slate-800">🚨 Urgent Priority</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg className="w-5 h-5 text-purple-300/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-6 border-t border-white/10">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-6 py-3 text-sm font-medium text-gray-300 bg-white/10 border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-200 backdrop-blur-sm"
+                >
+                  Cancel
+                </button>
+                <LoadingButton
+                  isLoading={addPatientMutation.isLoading}
+                  onClick={handleAddPatient}
+                  disabled={!(newPatientName.trim() || selectedExistingPatientId)}
+                  className={`px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${
+                    !(newPatientName.trim() || selectedExistingPatientId)
+                      ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white shadow-lg shadow-purple-500/25'
+                  }`}
+                  loadingText="Adding..."
+                >
+                  Add to Queue
+                </LoadingButton>
+              </div>
+            </div>
+          </Modal>
+        </div>
+      </div>
     </div>
   );
 };

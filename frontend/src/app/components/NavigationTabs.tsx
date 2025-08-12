@@ -76,47 +76,77 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ className = '' }) => {
 
   if (!isClient) {
     return (
-      <div className={`mb-4 md:mb-6 ${className}`}>
-        <nav className="flex space-x-1 overflow-x-auto scrollbar-hide px-1">
-          {tabs.map(tab => (
-            <div
-              key={tab.name}
-              className="px-3 md:px-4 py-2 rounded-md text-sm font-medium bg-surface-800 text-gray-400 animate-pulse whitespace-nowrap min-w-[44px] min-h-[44px] flex items-center justify-center"
-            >
-              <span className="hidden md:inline">{tab.name}</span>
-              <span className="md:hidden">{tab.shortName}</span>
-            </div>
-          ))}
-        </nav>
+      <div className={`mb-12 ${className}`}>
+        <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-2">
+          <nav className="flex space-x-2 overflow-x-auto scrollbar-hide">
+            {tabs.map(tab => (
+              <div
+                key={tab.name}
+                className="flex items-center space-x-3 px-6 py-4 rounded-xl animate-pulse whitespace-nowrap"
+              >
+                <div className="w-8 h-8 bg-white/20 rounded-lg"></div>
+                <div>
+                  <div className="hidden sm:block w-32 h-4 bg-white/20 rounded mb-1"></div>
+                  <div className="sm:hidden w-20 h-4 bg-white/20 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`mb-6 ${className}`}>
-      <nav className="flex space-x-2" role="tablist">
-        {tabs.map(tab => {
-          const isActive = currentTab === tab.href;
-          
-          return (
-            <Link
-              key={tab.name}
-              href={tab.href}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                isActive
-                  ? 'bg-gray-700 text-white'
-                  : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
-              }`}
-              aria-current={isActive ? 'page' : undefined}
-              role="tab"
-              aria-selected={isActive}
-            >
-              <span className="hidden sm:inline">{tab.name}</span>
-              <span className="sm:hidden">{tab.shortName}</span>
-            </Link>
-          );
-        })}
-      </nav>
+    <div className={`mb-12 ${className}`}>
+      <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-2">
+        <nav className="flex space-x-2 overflow-x-auto scrollbar-hide" role="tablist">
+          {tabs.map(tab => {
+            const isActive = currentTab === tab.href;
+            
+            return (
+              <Link
+                key={tab.name}
+                href={tab.href}
+                className={`group flex items-center space-x-3 px-6 py-4 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap transform hover:scale-105 relative overflow-hidden ${
+                  isActive
+                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-xl shadow-purple-500/30'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/10'
+                }`}
+                aria-current={isActive ? 'page' : undefined}
+                role="tab"
+                aria-selected={isActive}
+              >
+                {/* Active indicator */}
+                {isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-violet-400/20 animate-pulse"></div>
+                )}
+                
+                <div className={`relative z-10 p-2 rounded-lg transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-white/10 text-gray-400 group-hover:bg-white/20 group-hover:text-white'
+                }`}>
+                  {tab.icon}
+                </div>
+                
+                <div className="relative z-10">
+                  <span className="hidden sm:inline font-bold">{tab.name}</span>
+                  <span className="sm:hidden font-bold">{tab.shortName}</span>
+                  {isActive && (
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white/50 rounded-full"></div>
+                  )}
+                </div>
+                
+                {/* Hover effect */}
+                {!isActive && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/5 to-violet-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 };

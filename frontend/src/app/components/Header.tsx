@@ -8,18 +8,18 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-surface-900 border-b border-gray-800 sticky top-0 z-40">
+    <header className="backdrop-blur-xl bg-black/50 border-b border-white/10 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-3 md:py-4">
+        <div className="flex justify-between items-center py-4 md:py-5">
           {/* Logo and Title */}
           <div className="flex items-center">
-            <div className="flex items-center space-x-2 md:space-x-3">
-              <div className="w-7 h-7 md:w-8 md:h-8 bg-accent-600 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 2L3 7v11a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V7l-7-5z" clipRule="evenodd" />
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <h1 className="text-lg md:text-xl font-semibold text-white truncate">
+              <h1 className="text-xl md:text-2xl font-bold text-white bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
                 <span className="hidden sm:inline">Clinic Front Desk</span>
                 <span className="sm:hidden">Clinic</span>
               </h1>
@@ -27,18 +27,18 @@ const Header = () => {
           </div>
           
           {/* Desktop User Info and Logout */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-6">
             {user && (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-accent-600 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/25">
+                    <span className="text-sm font-semibold text-white">
                       {user.username?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   </div>
                   <div className="hidden lg:block">
-                    <p className="text-sm font-medium text-white">{user.username}</p>
-                    <p className="text-xs text-gray-400">Front Desk Staff</p>
+                    <p className="text-sm font-semibold text-white">{user.username}</p>
+                    <p className="text-xs text-purple-300">Front Desk Staff</p>
                   </div>
                 </div>
               </div>
@@ -46,7 +46,7 @@ const Header = () => {
             
             <button
               onClick={logout}
-              className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors rounded-md hover:bg-surface-800 desktop:hover:shadow-md"
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-all duration-200 rounded-xl hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20"
               aria-label="Log out"
             >
               Log out
@@ -57,7 +57,7 @@ const Header = () => {
           <div className="md:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-md text-gray-300 hover:text-white hover:bg-surface-800 focus:outline-none focus:ring-2 focus:ring-accent-500 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-3 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/50 min-w-[44px] min-h-[44px] flex items-center justify-center backdrop-blur-sm border border-white/10"
               aria-label="Toggle mobile menu"
               aria-expanded={isMobileMenuOpen}
             >
@@ -76,18 +76,18 @@ const Header = () => {
 
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-700 py-3">
-            <div className="flex flex-col space-y-3">
+          <div className="md:hidden border-t border-white/10 py-4">
+            <div className="flex flex-col space-y-4">
               {user && (
-                <div className="flex items-center space-x-3 px-2">
-                  <div className="w-8 h-8 bg-accent-600 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">
+                <div className="flex items-center space-x-4 px-3 py-2 rounded-xl bg-white/5">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/25">
+                    <span className="text-sm font-semibold text-white">
                       {user.username?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">{user.username}</p>
-                    <p className="text-xs text-gray-400">Front Desk Staff</p>
+                    <p className="text-sm font-semibold text-white">{user.username}</p>
+                    <p className="text-xs text-purple-300">Front Desk Staff</p>
                   </div>
                 </div>
               )}
@@ -97,7 +97,7 @@ const Header = () => {
                   logout();
                   setIsMobileMenuOpen(false);
                 }}
-                className="flex items-center px-2 py-2 text-sm text-gray-300 hover:text-white hover:bg-surface-800 rounded-md transition-colors min-h-[44px]"
+                className="flex items-center px-3 py-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-200 min-h-[44px] backdrop-blur-sm border border-white/10"
                 aria-label="Log out"
               >
                 <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

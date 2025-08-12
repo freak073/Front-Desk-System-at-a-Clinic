@@ -20,6 +20,8 @@ import { apiService } from '../../../lib/api';
 import { highlightMatch } from '../../components/highlight';
 import FilterBar from '../../components/FilterBar';
 import SearchResults from '../../components/SearchResults';
+import Header from '../../components/Header';
+import NavigationTabs from '../../components/NavigationTabs';
 
 const AppointmentsPage = () => {
   const { user, loading: authLoading } = useAuth();
