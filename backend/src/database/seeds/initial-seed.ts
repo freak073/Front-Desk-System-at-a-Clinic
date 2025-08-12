@@ -109,10 +109,12 @@ const PATIENTS_SEED: Partial<Patient>[] = [
 
 async function seedUsers(dataSource: DataSource) {
   const userRepo = dataSource.getRepository(User);
-  
+
   // Create admin user
   const adminUsername = "admin";
-  let adminUser = await userRepo.findOne({ where: { username: adminUsername } });
+  let adminUser = await userRepo.findOne({
+    where: { username: adminUsername },
+  });
   if (!adminUser) {
     const hashedPassword = await bcrypt.hash(
       process.env.SEED_ADMIN_PASSWORD || "Admin123",
@@ -127,7 +129,10 @@ async function seedUsers(dataSource: DataSource) {
     await userRepo.save(adminUser);
     console.log("👤 Created admin user.");
   } else if (process.env.SEED_ADMIN_PASSWORD) {
-    adminUser.passwordHash = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD, 10);
+    adminUser.passwordHash = await bcrypt.hash(
+      process.env.SEED_ADMIN_PASSWORD,
+      10,
+    );
     await userRepo.save(adminUser);
     console.log("🔐 Updated admin password.");
   } else {
@@ -136,7 +141,9 @@ async function seedUsers(dataSource: DataSource) {
 
   // Create staff user
   const staffUsername = "staff";
-  let staffUser = await userRepo.findOne({ where: { username: staffUsername } });
+  let staffUser = await userRepo.findOne({
+    where: { username: staffUsername },
+  });
   if (!staffUser) {
     const hashedPassword = await bcrypt.hash(
       process.env.SEED_STAFF_PASSWORD || "Staff123",
@@ -151,7 +158,10 @@ async function seedUsers(dataSource: DataSource) {
     await userRepo.save(staffUser);
     console.log("👤 Created staff user.");
   } else if (process.env.SEED_STAFF_PASSWORD) {
-    staffUser.passwordHash = await bcrypt.hash(process.env.SEED_STAFF_PASSWORD, 10);
+    staffUser.passwordHash = await bcrypt.hash(
+      process.env.SEED_STAFF_PASSWORD,
+      10,
+    );
     await userRepo.save(staffUser);
     console.log("🔐 Updated staff password.");
   } else {
@@ -412,8 +422,14 @@ export async function seedDatabase(dataSource: DataSource) {
     await queryRunner.commitTransaction();
     console.log("\n✅ Database seeded successfully!");
     console.log("🔐 Login credentials:");
-    console.log("   Admin - Username: admin, Password:", process.env.SEED_ADMIN_PASSWORD || "Admin123");
-    console.log("   Staff - Username: staff, Password:", process.env.SEED_STAFF_PASSWORD || "Staff123");
+    console.log(
+      "   Admin - Username: admin, Password:",
+      process.env.SEED_ADMIN_PASSWORD || "Admin123",
+    );
+    console.log(
+      "   Staff - Username: staff, Password:",
+      process.env.SEED_STAFF_PASSWORD || "Staff123",
+    );
     try {
       if (allowReset || !fs.existsSync(lockPath)) {
         fs.writeFileSync(

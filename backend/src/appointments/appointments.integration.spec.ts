@@ -78,7 +78,9 @@ describe("AppointmentsController (Integration)", () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   beforeEach(async () => {
