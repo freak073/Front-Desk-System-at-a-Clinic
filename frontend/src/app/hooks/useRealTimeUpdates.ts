@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
-import { useQuery, useQueryClient, UseQueryResult } from 'react-query';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useQuery, useQueryClient, UseQueryResult, useMutation } from 'react-query';
 import { apiService } from '../../lib/api';
 import { CACHE_CONFIG, CACHE_KEYS, createCacheKey } from '../../lib/cacheUtils';
+import { useGlobalState } from '../../context/GlobalStateContext';
+import { useToast } from '../components/ToastProvider';
 
 // Types for our real-time data
 interface RealTimeData<T> {
@@ -9,31 +11,61 @@ interface RealTimeData<T> {
   timestamp: number;
 }
 
-// Generic hook for real-time updates
+// Enhanced generic hook for real-time updates with global state integration
 export const useRealTimeUpdates = <T,>(
   key: string | unknown[],
   endpoint: string,
-  interval: number = 5000 // 5 seconds default
+  interval: number = 5000, // 5 seconds default
+  options?: {
+    enabled?: boolean;
+    onSuccess?: (data: RealTimeData<T>) => void;
+    onError?: (error: Error) => void;
+    optimisticUpdates?: boolean;
+  }
 ): UseQueryResult<RealTimeData<T>, Error> & { 
   lastUpdated: number | null;
   isPolling: boolean;
+  syncStatus: 'idle' | 'syncing' | 'error';
 } => {
   const queryClient = useQueryClient();
   const lastUpdatedRef = useRef<number | null>(null);
+  const { state, setSyncStatus, setErrorState } = useGlobalState();
+  const { success: showSuccess, error: showError } = useToast();
   
-  // Fetch data function
+  // Determine the data type for sync status tracking
+  const dataType = useMemo(() => {
+    if (typeof key === 'string') {
+      return key as keyof typeof state.syncStatus;
+    }
+    if (Array.isArray(key) && typeof key[0] === 'string') {
+      return key[0] as keyof typeof state.syncStatus;
+    }
+    return 'queue' as keyof typeof state.syncStatus; // fallback
+  }, [key]);
+  
+  // Fetch data function with enhanced error handling
   const fetchData = async (): Promise<RealTimeData<T>> => {
     try {
+      setSyncStatus(dataType, 'syncing');
       const response = await apiService.get<T>(endpoint);
       const timestamp = Date.now();
       lastUpdatedRef.current = timestamp;
       
-      return {
+      setSyncStatus(dataType, 'idle');
+      setErrorState(dataType, null);
+      
+      const result = {
         data: response.data as T,
         timestamp
       };
+      
+      options?.onSuccess?.(result);
+      return result;
     } catch (error) {
       console.error(`Error fetching ${endpoint}:`, error);
+      setSyncStatus(dataType, 'error');
+      setErrorState(dataType, error instanceof Error ? error.message : 'Unknown error');
+      options?.onError?.(error as Error);
       throw error;
     }
   };
@@ -51,21 +83,30 @@ export const useRealTimeUpdates = <T,>(
     cacheKey,
     fetchData,
     {
-      refetchInterval: interval,
+      enabled: options?.enabled !== false && state.isOnline,
+      refetchInterval: state.isOnline ? interval : false,
       // Use shorter stale time for real-time data
       staleTime: Math.min(interval, CACHE_CONFIG.SHORT_CACHE_TIME),
       // Cache for longer than the polling interval to prevent unnecessary refetches
       cacheTime: interval * 3,
       // Enable background refetching
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: state.isOnline,
       refetchOnReconnect: true,
-      // Retry failed requests
-      retry: 2,
+      // Retry failed requests with exponential backoff
+      retry: (failureCount, error) => {
+        if (!state.isOnline) return false;
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       // Keep previous data while fetching new data
       keepPreviousData: true,
       // Error handling
       onError: (error) => {
         console.error(`Error in real-time updates for ${key}:`, error);
+        setSyncStatus(dataType, 'error');
+      },
+      onSuccess: () => {
+        setSyncStatus(dataType, 'idle');
       }
     }
   );
@@ -74,17 +115,28 @@ export const useRealTimeUpdates = <T,>(
   return {
     ...queryResult,
     lastUpdated: lastUpdatedRef.current,
-    isPolling: queryResult.isFetching && !queryResult.isLoading
+    isPolling: queryResult.isFetching && !queryResult.isLoading,
+    syncStatus: state.syncStatus[dataType] || 'idle'
   } as UseQueryResult<RealTimeData<T>, Error> & { 
     lastUpdated: number | null;
     isPolling: boolean;
+    syncStatus: 'idle' | 'syncing' | 'error';
   };
 };
 
 // Specific hooks for our application data
 
 // Hook for real-time queue updates with pagination support
-export const useQueueUpdates = (page: number = 1, pageSize: number = 10) => {
+export const useQueueUpdates = (
+  page: number = 1, 
+  pageSize: number = 10,
+  options?: {
+    enabled?: boolean;
+    onSuccess?: (data: RealTimeData<any>) => void;
+    onError?: (error: Error) => void;
+    optimisticUpdates?: boolean;
+  }
+) => {
   const endpoint = useMemo(() => `/queue?page=${page}&limit=${pageSize}`, [page, pageSize]);
   
   return useRealTimeUpdates<{
@@ -99,12 +151,23 @@ export const useQueueUpdates = (page: number = 1, pageSize: number = 10) => {
   }>(
     [CACHE_KEYS.QUEUE, page, pageSize],
     endpoint,
-    3000 // Update every 3 seconds for queue
+    3000, // Update every 3 seconds for queue
+    options
   );
 };
 
 // Hook for real-time appointment updates with pagination support
-export const useAppointmentUpdates = (page: number = 1, pageSize: number = 10, date?: string) => {
+export const useAppointmentUpdates = (
+  page: number = 1, 
+  pageSize: number = 10, 
+  date?: string,
+  options?: {
+    enabled?: boolean;
+    onSuccess?: (data: RealTimeData<any>) => void;
+    onError?: (error: Error) => void;
+    optimisticUpdates?: boolean;
+  }
+) => {
   const endpoint = useMemo(() => {
     let url = `/appointments?page=${page}&limit=${pageSize}`;
     if (date) url += `&date=${date}`;
@@ -123,12 +186,23 @@ export const useAppointmentUpdates = (page: number = 1, pageSize: number = 10, d
   }>(
     [CACHE_KEYS.APPOINTMENTS, page, pageSize, date],
     endpoint,
-    5000 // Update every 5 seconds for appointments
+    5000, // Update every 5 seconds for appointments
+    options
   );
 };
 
 // Hook for real-time doctor status updates with pagination support
-export const useDoctorStatusUpdates = (page: number = 1, pageSize: number = 10, status?: string) => {
+export const useDoctorStatusUpdates = (
+  page: number = 1, 
+  pageSize: number = 10, 
+  status?: string,
+  options?: {
+    enabled?: boolean;
+    onSuccess?: (data: RealTimeData<any>) => void;
+    onError?: (error: Error) => void;
+    optimisticUpdates?: boolean;
+  }
+) => {
   const endpoint = useMemo(() => {
     let url = `/doctors?page=${page}&limit=${pageSize}`;
     if (status) url += `&status=${status}`;
@@ -147,50 +221,145 @@ export const useDoctorStatusUpdates = (page: number = 1, pageSize: number = 10, 
   }>(
     [CACHE_KEYS.DOCTORS, page, pageSize, status],
     endpoint,
-    10000 // Update every 10 seconds for doctor status
+    10000, // Update every 10 seconds for doctor status
+    options
   );
 };
 
 // Hook for real-time dashboard stats
-export const useDashboardStatsUpdates = () => {
+export const useDashboardStatsUpdates = (
+  options?: {
+    enabled?: boolean;
+    onSuccess?: (data: RealTimeData<any>) => void;
+    onError?: (error: Error) => void;
+    optimisticUpdates?: boolean;
+  }
+) => {
   return useRealTimeUpdates<any>(
     CACHE_KEYS.DASHBOARD,
     '/dashboard/stats',
-    10000 // Update every 10 seconds for stats
+    10000, // Update every 10 seconds for stats
+    options
   );
 };
 
-// Utility hook for optimistic updates with improved caching
+// Enhanced optimistic updates hook with global state integration
 export const useOptimisticUpdate = <T,>(
   key: string | unknown[],
-  updateFn: (oldData: T | undefined, newData: T) => T
+  updateFn: (oldData: T | undefined, newData: T) => T,
+  options?: {
+    onSuccess?: (data: T) => void;
+    onError?: (error: Error, rollbackData: T | undefined) => void;
+    showNotifications?: boolean;
+  }
 ) => {
   const queryClient = useQueryClient();
+  const { addOptimisticUpdate, removeOptimisticUpdate } = useGlobalState();
+  const { success: showSuccess, error: showError } = useToast();
   
-  return (newData: T) => {
-    // Update the cache optimistically
-    queryClient.setQueryData<T>(key, (oldData: T | undefined) => 
-      updateFn(oldData, newData)
-    );
+  return useCallback((
+    newData: T, 
+    mutationFn?: () => Promise<T>,
+    updateType: 'create' | 'update' | 'delete' = 'update'
+  ) => {
+    const updateId = `${JSON.stringify(key)}-${Date.now()}`;
+    const previousData = queryClient.getQueryData<T>(key);
     
-    // Optionally, you can set this data as fresh for a short period
-    // to prevent immediate refetching
-    queryClient.invalidateQueries(key, {
-      refetchActive: false,
-      refetchInactive: false
-    });
-  };
+    try {
+      // Add to optimistic updates tracking
+      addOptimisticUpdate(updateId, updateType, newData);
+      
+      // Update the cache optimistically
+      queryClient.setQueryData<T>(key, (oldData: T | undefined) => 
+        updateFn(oldData, newData)
+      );
+      
+      // If mutation function is provided, execute it
+      if (mutationFn) {
+        mutationFn()
+          .then((result) => {
+            // Success - remove from optimistic updates and show notification
+            removeOptimisticUpdate(updateId);
+            options?.onSuccess?.(result);
+            
+            if (options?.showNotifications !== false) {
+              const action = updateType === 'create' ? 'created' : 
+                           updateType === 'delete' ? 'deleted' : 'updated';
+              showSuccess(`Successfully ${action}`);
+            }
+            
+            // Invalidate queries to ensure fresh data
+            queryClient.invalidateQueries(key);
+          })
+          .catch((error) => {
+            // Error - rollback optimistic update
+            removeOptimisticUpdate(updateId);
+            if (previousData !== undefined) {
+              queryClient.setQueryData<T>(key, previousData);
+            }
+            
+            options?.onError?.(error, previousData);
+            
+            if (options?.showNotifications !== false) {
+              const action = updateType === 'create' ? 'create' : 
+                           updateType === 'delete' ? 'delete' : 'update';
+              showError(`Failed to ${action}: ${error.message}`);
+            }
+          });
+      }
+    } catch (error) {
+      // Immediate error - rollback
+      removeOptimisticUpdate(updateId);
+      if (previousData !== undefined) {
+        queryClient.setQueryData<T>(key, previousData);
+      }
+      
+      if (options?.showNotifications !== false) {
+        showError(`Update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+  }, [queryClient, key, updateFn, addOptimisticUpdate, removeOptimisticUpdate, showSuccess, showError, options]);
 };
 
-// Utility hook for showing notifications
+// Enhanced notifications hook with global state integration
 export const useNotifications = () => {
-  // Lazy import inside hook to avoid circular dependencies if any
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const toastCtx = require('../components/ToastProvider');
-  const useToast = toastCtx.useToast as () => { success: (m:string)=>void; error:(m:string)=>void; info:(m:string)=>void };
-  const { success, error } = useToast();
+  const { success, error, info } = useToast();
+  const { state } = useGlobalState();
+  
   return {
     showSuccess: success,
     showError: error,
+    showInfo: info,
+    
+    // Enhanced notification methods with context
+    notifyDataUpdate: useCallback((dataType: string, action: 'created' | 'updated' | 'deleted') => {
+      success(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} ${action} successfully`);
+    }, [success]),
+    
+    notifyDataError: useCallback((dataType: string, action: string, errorMessage?: string) => {
+      error(`Failed to ${action} ${dataType}${errorMessage ? `: ${errorMessage}` : ''}`);
+    }, [error]),
+    
+    notifyConnectionStatus: useCallback((isOnline: boolean) => {
+      if (isOnline) {
+        success('Connection restored');
+      } else {
+        error('Connection lost. Some features may not work properly.');
+      }
+    }, [success, error]),
+    
+    notifySyncStatus: useCallback((dataType: string, status: 'syncing' | 'completed' | 'failed') => {
+      switch (status) {
+        case 'syncing':
+          info(`Syncing ${dataType}...`);
+          break;
+        case 'completed':
+          success(`${dataType.charAt(0).toUpperCase() + dataType.slice(1)} synced`);
+          break;
+        case 'failed':
+          error(`Failed to sync ${dataType}`);
+          break;
+      }
+    }, [info, success, error]),
   };
 };

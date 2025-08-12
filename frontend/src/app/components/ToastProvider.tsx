@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Toast {
@@ -24,6 +24,13 @@ export const useToast = () => {
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Ensure we only render portals after hydration
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
   const remove = useCallback((id: string) => {
     setToasts(t => t.filter(x => x.id !== id));
   }, []);
@@ -39,8 +46,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     error: (m, ttl) => show(m, 'error', ttl),
     info: (m, ttl) => show(m, 'info', ttl)
   }), [show]);
-  // Avoid SSR document access
-  const canPortal = typeof document !== 'undefined' && !!document.body;
+  
+  // Only render portal after component is mounted (client-side only)
+  const canPortal = isMounted && typeof document !== 'undefined' && !!document.body;
   return (
     <ToastContext.Provider value={value}>
       {children}

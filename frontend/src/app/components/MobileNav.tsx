@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 const navItems = [
-  { href: '/dashboard/appointments', label: 'Appointments' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/dashboard/queue', label: 'Queue' },
-  { href: '/dashboard', label: 'Dashboard' }
+  { href: '/dashboard/appointments', label: 'Appointments' },
+  { href: '/dashboard/doctors', label: 'Doctors' }
 ];
 
 interface MobileNavProps { onSwipeNavigate?: (dir: 'left'|'right') => void; }

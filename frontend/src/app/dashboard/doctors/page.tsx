@@ -140,6 +140,15 @@ const DoctorManagementPage = () => {
   };
 
   const handleDeleteDoctor = async (doctorId: number) => {
+    const doctor = doctors.find(d => d.id === doctorId);
+    if (!doctor) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete Dr. ${doctor.name}? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
     try {
       const success = await deleteDoctor(doctorId);
       if (success) {
@@ -147,12 +156,19 @@ const DoctorManagementPage = () => {
       }
     } catch (err) {
       console.error('Error deleting doctor:', err);
+      alert('Failed to delete doctor. Please try again.');
     }
   };
 
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleDoctor, setScheduleDoctor] = useState<Doctor | null>(null);
+
   const handleViewDoctorSchedule = async (doctorId: number) => {
-    // Implementation for viewing doctor schedule
-    console.log('View schedule for doctor:', doctorId);
+    const doctor = doctors.find(d => d.id === doctorId);
+    if (doctor) {
+      setScheduleDoctor(doctor);
+      setShowScheduleModal(true);
+    }
   };
 
   const handleEditDoctor = (doctorId: number) => {
@@ -326,6 +342,121 @@ const DoctorManagementPage = () => {
           />
         )}
       </Modal>
+
+      {/* Doctor Schedule Modal */}
+      <Modal
+        isOpen={showScheduleModal && !!scheduleDoctor}
+        onClose={() => {
+          setShowScheduleModal(false);
+          setScheduleDoctor(null);
+        }}
+        title={`${scheduleDoctor?.name} - Schedule`}
+        size="lg"
+      >
+        {scheduleDoctor && (
+          <DoctorScheduleView doctor={scheduleDoctor} />
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+// Doctor Schedule View Component
+const DoctorScheduleView = ({ doctor }: { doctor: Doctor }) => {
+  const [schedule, setSchedule] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Parse the availability schedule if it exists
+    try {
+      if (doctor.availabilitySchedule) {
+        const parsed = typeof doctor.availabilitySchedule === 'string' 
+          ? JSON.parse(doctor.availabilitySchedule)
+          : doctor.availabilitySchedule;
+        setSchedule(parsed);
+      } else {
+        // Default schedule
+        setSchedule({
+          monday: { start: '09:00', end: '17:00' },
+          tuesday: { start: '09:00', end: '17:00' },
+          wednesday: { start: '09:00', end: '17:00' },
+          thursday: { start: '09:00', end: '17:00' },
+          friday: { start: '09:00', end: '17:00' },
+          saturday: { start: '09:00', end: '13:00' },
+          sunday: { start: 'off', end: 'off' }
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing schedule:', error);
+      setSchedule({});
+    } finally {
+      setLoading(false);
+    }
+  }, [doctor]);
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading schedule...</div>;
+  }
+
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+        <div>
+          <div className="text-gray-500">Doctor</div>
+          <div className="font-medium text-gray-100">{doctor.name}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Specialization</div>
+          <div className="font-medium text-gray-100">{doctor.specialization}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Location</div>
+          <div className="font-medium text-gray-100">{doctor.location}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Status</div>
+          <div className="font-medium text-gray-100 capitalize">{doctor.status.replace('_', ' ')}</div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-medium text-gray-100 mb-4">Weekly Schedule</h3>
+        <div className="space-y-2">
+          {days.map((day, index) => {
+            const daySchedule = schedule[day];
+            const isOff = !daySchedule || daySchedule.start === 'off' || daySchedule.end === 'off';
+            
+            return (
+              <div key={day} className="flex items-center justify-between p-3 bg-surface-700 rounded-lg">
+                <div className="font-medium text-gray-200 w-24">
+                  {dayNames[index]}
+                </div>
+                <div className="text-gray-300">
+                  {isOff ? (
+                    <span className="text-red-400">Off</span>
+                  ) : (
+                    <span>
+                      {daySchedule.start} - {daySchedule.end}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-4">
+        <button
+          onClick={() => window.close()}
+          className="px-4 py-2 bg-surface-700 text-gray-200 rounded-md hover:bg-surface-600 transition focus:outline-none focus:ring-2 focus:ring-accent-500"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 };

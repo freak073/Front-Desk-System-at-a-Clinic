@@ -2,7 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import helmet from "helmet";
-import compression from "compression";
+import * as compression from "compression";
 import { buildRuntimeDbLog } from "./database/db-config";
 import { Request, Response, NextFunction } from "express";
 
@@ -52,12 +52,19 @@ async function bootstrap(): Promise<void> {
     .map((o) => o.trim());
   app.enableCors({
     origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      // Allow requests with no origin (like mobile apps, curl, Postman, etc.)
+      if (!origin) return cb(null, true);
+      // Allow configured origins
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // In development, be more permissive
+      if (process.env.NODE_ENV === "development") {
+        return cb(null, true);
+      }
       return cb(new Error("Not allowed by CORS"));
     },
     credentials: true,
     methods: "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization",
+    allowedHeaders: "Content-Type,Authorization,Accept",
     maxAge: 600,
   });
 
@@ -73,7 +80,9 @@ async function bootstrap(): Promise<void> {
 
   if (process.env.NODE_ENV !== "test") {
     app.use((req: Request, _res: Response, next: NextFunction) => {
-      const { method, originalUrl, headers, body, query } = req;
+      const { method, originalUrl, headers, query } = req;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { body } = req;
       if (!originalUrl.includes("health")) {
         // eslint-disable-next-line no-console
         console.log(
@@ -131,4 +140,4 @@ async function bootstrap(): Promise<void> {
   console.log(`Application is running on: http://localhost:${port}`);
 }
 
-bootstrap();
+void bootstrap();
