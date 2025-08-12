@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from "class-validator";
 
 export class DoctorQueryDto {
   @IsOptional()
@@ -10,7 +10,7 @@ export class DoctorQueryDto {
   location?: string;
 
   @IsOptional()
-  @IsEnum(['available', 'busy', 'off_duty'])
+  @IsEnum(["available", "busy", "off_duty"])
   status?: string;
 
   @IsOptional()

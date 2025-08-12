@@ -4,7 +4,7 @@ import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { apiService } from "../lib/api";
-import { User, AuthResponse, LoginDto } from "../types";
+import { User, AuthResponse, LoginDto, SignupDto } from "../types";
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   login: (data: LoginDto) => Promise<void>;
+  signup: (data: SignupDto) => Promise<void>;
   logout: () => void;
   refreshToken: () => Promise<void>;
 }
@@ -86,6 +87,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [token]);
 
+  const handleAuthResponse = async (res: any, action: string) => {
+    console.log(`${action} response:`, res);
+    
+    // Handle all possible token locations in the response
+    const responseData = res as unknown as {
+      data?: { token?: string; access_token?: string };
+      token?: string;
+      access_token?: string;
+    };
+
+    const token = responseData.data?.token || 
+                 responseData.data?.access_token || 
+                 responseData.token || 
+                 responseData.access_token;
+    
+    if (!token) {
+      console.error(`No token in ${action} response:`, JSON.stringify(responseData, null, 2));
+      throw new Error('No token received from server');
+    }
+    
+    try {
+      const decodedUser = jwtDecode<User & { exp: number }>(token);
+      const isExpired = decodedUser.exp * 1000 < Date.now();
+      
+      if (!isExpired) {
+        // Set cookie first with secure options
+        Cookies.set("auth_token", token, { 
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/'
+        });
+        
+        // Then update state
+        setToken(token);
+        setUser(decodedUser);
+        
+        // Add a small delay before redirect
+        await new Promise(resolve => setTimeout(resolve, 100));
+        router.replace("/dashboard");
+      } else {
+        throw new Error(`Token expired immediately after ${action}.`);
+      }
+    } catch (err) {
+      console.error(`Token decode error in ${action}:`, err);
+      throw new Error("Invalid authentication token");
+    }
+  };
+
   const login = async (data: LoginDto) => {
     if (loading) return; // Prevent multiple simultaneous login attempts
     setLoading(true);
@@ -97,52 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password: data.password
       });
       
-      console.log('Login response:', res);
-      
-      // Handle both possible response formats
-      // Handle all possible token locations in the response
-      const responseData = res as unknown as {
-        data?: { token?: string; access_token?: string };
-        token?: string;
-        access_token?: string;
-      };
-
-      const token = responseData.data?.token || 
-                   responseData.data?.access_token || 
-                   responseData.token || 
-                   responseData.access_token;
-      
-      if (!token) {
-        console.error('No token in response:', JSON.stringify(responseData, null, 2));
-        throw new Error('No token received from server');
-      }
-      
-      try {
-        const decodedUser = jwtDecode<User & { exp: number }>(token);
-        const isExpired = decodedUser.exp * 1000 < Date.now();
-        
-        if (!isExpired) {
-          // Set cookie first with secure options
-          Cookies.set("auth_token", token, { 
-            secure: true,
-            sameSite: 'lax', // Changed to lax to work with redirects
-            path: '/'
-          });
-          
-          // Then update state
-          setToken(token);
-          setUser(decodedUser);
-          
-          // Add a small delay before redirect
-          await new Promise(resolve => setTimeout(resolve, 100));
-          router.replace("/dashboard");
-        } else {
-          throw new Error("Token expired immediately after login.");
-        }
-      } catch (err) {
-        console.error("Token decode error:", err);
-        throw new Error("Invalid authentication token");
-      }
+      await handleAuthResponse(res, 'Login');
     } catch (err: any) {
       console.error("Login error:", err);
       setUser(null);
@@ -156,6 +160,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setError("Cannot connect to server. Please try again.");
       } else {
         setError(err.response?.data?.message || err.message || "Login failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signup = async (data: SignupDto) => {
+    if (loading) return; // Prevent multiple simultaneous signup attempts
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('Signup attempt with:', { username: data.username, role: data.role });
+      const res = await apiService.post<AuthResponse["data"]>("/auth/signup", {
+        username: data.username,
+        password: data.password,
+        role: data.role || 'staff',
+        fullName: data.fullName
+      });
+      
+      await handleAuthResponse(res, 'Signup');
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setUser(null);
+      setToken(null);
+      Cookies.remove("auth_token");
+      
+      // More detailed error handling
+      if (err.response?.status === 409) {
+        setError("Username already exists. Please choose a different username.");
+      } else if (err.response?.status === 400) {
+        setError(err.response?.data?.message || "Invalid signup data. Please check your input.");
+      } else if (!err.response) {
+        setError("Cannot connect to server. Please try again.");
+      } else {
+        setError(err.response?.data?.message || err.message || "Signup failed");
       }
     } finally {
       setLoading(false);
@@ -212,6 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loading,
       error,
       login,
+      signup,
       logout,
       refreshToken,
     }),

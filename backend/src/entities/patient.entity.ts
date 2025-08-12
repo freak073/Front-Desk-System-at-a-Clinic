@@ -1,7 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  Index,
+} from "typeorm";
 
-@Entity('patients')
-@Index(['name'])
+@Entity("patients")
+@Index(["name"])
 export class Patient {
   @PrimaryGeneratedColumn()
   id: number;
@@ -10,29 +18,29 @@ export class Patient {
   name: string;
 
   @Column({
-    name: 'contact_info',
+    name: "contact_info",
     length: 255,
-    nullable: true
+    nullable: true,
   })
   contactInfo: string;
 
   @Column({
-    name: 'medical_record_number',
+    name: "medical_record_number",
     length: 50,
     unique: true,
-    nullable: true
+    nullable: true,
   })
   medicalRecordNumber: string;
 
-  @OneToMany('QueueEntry', 'patient')
+  @OneToMany("QueueEntry", "patient")
   queueEntries: any[];
 
-  @OneToMany('Appointment', 'patient')
+  @OneToMany("Appointment", "patient")
   appointments: any[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 }

@@ -1,4 +1,4 @@
-import { Expose, Transform, Type } from 'class-transformer';
+import { Expose, Transform, Type } from "class-transformer";
 
 export class QueueEntryResponseDto {
   @Expose()
@@ -17,7 +17,9 @@ export class QueueEntryResponseDto {
   priority: string;
 
   @Expose()
-  @Transform(({ value }) => value instanceof Date ? value.toISOString() : value)
+  @Transform(({ value }) =>
+    value instanceof Date ? value.toISOString() : value,
+  )
   arrivalTime: Date;
 
   @Expose()
@@ -33,10 +35,14 @@ export class QueueEntryResponseDto {
   };
 
   @Expose()
-  @Transform(({ value }) => value instanceof Date ? value.toISOString() : value)
+  @Transform(({ value }) =>
+    value instanceof Date ? value.toISOString() : value,
+  )
   createdAt: Date;
 
   @Expose()
-  @Transform(({ value }) => value instanceof Date ? value.toISOString() : value)
+  @Transform(({ value }) =>
+    value instanceof Date ? value.toISOString() : value,
+  )
   updatedAt: Date;
 }

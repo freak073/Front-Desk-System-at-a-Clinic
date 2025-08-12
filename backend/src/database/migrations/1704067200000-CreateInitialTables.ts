@@ -1,7 +1,7 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class CreateInitialTables1704067200000 implements MigrationInterface {
-  name = 'CreateInitialTables1704067200000';
+  name = "CreateInitialTables1704067200000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create users table
@@ -112,9 +112,15 @@ export class CreateInitialTables1704067200000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop foreign key constraints
-    await queryRunner.query(`ALTER TABLE \`appointments\` DROP FOREIGN KEY \`FK_appointments_doctor\``);
-    await queryRunner.query(`ALTER TABLE \`appointments\` DROP FOREIGN KEY \`FK_appointments_patient\``);
-    await queryRunner.query(`ALTER TABLE \`queue_entries\` DROP FOREIGN KEY \`FK_queue_entries_patient\``);
+    await queryRunner.query(
+      `ALTER TABLE \`appointments\` DROP FOREIGN KEY \`FK_appointments_doctor\``,
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`appointments\` DROP FOREIGN KEY \`FK_appointments_patient\``,
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`queue_entries\` DROP FOREIGN KEY \`FK_queue_entries_patient\``,
+    );
 
     // Drop tables in reverse order
     await queryRunner.query(`DROP TABLE \`appointments\``);

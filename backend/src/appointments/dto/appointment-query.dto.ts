@@ -1,5 +1,12 @@
-import { IsOptional, IsString, IsEnum, IsDateString, IsNumber, Min } from 'class-validator';
-import { Transform } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsDateString,
+  IsNumber,
+  Min,
+} from "class-validator";
+import { Transform } from "class-transformer";
 
 export class AppointmentQueryDto {
   @IsOptional()
@@ -12,7 +19,7 @@ export class AppointmentQueryDto {
   doctorId?: number;
 
   @IsOptional()
-  @IsEnum(['booked', 'completed', 'canceled'])
+  @IsEnum(["booked", "completed", "canceled"])
   status?: string;
 
   @IsOptional()

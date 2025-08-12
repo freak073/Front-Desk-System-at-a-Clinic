@@ -2,8 +2,9 @@
  * Performance middleware for optimizing API responses and tracking performance metrics
  */
 
-import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+import { Injectable, NestMiddleware, Logger } from "@nestjs/common";
+import { Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 
 /**
  * Configuration for performance middleware
@@ -30,7 +31,7 @@ export const PERFORMANCE_CONFIG = {
  */
 @Injectable()
 export class PerformanceMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('PerformanceMiddleware');
+  private readonly logger = new Logger("PerformanceMiddleware");
 
   use(req: Request, res: Response, next: NextFunction) {
     // Skip if performance tracking is disabled
@@ -43,29 +44,29 @@ export class PerformanceMiddleware implements NestMiddleware {
 
     // Add request ID for tracking
     const requestId = this.generateRequestId();
-    req['requestId'] = requestId;
+    req["requestId"] = requestId;
 
     // Log request start in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       this.logger.debug(
-        `[${requestId}] ${req.method} ${req.originalUrl} - Started`
+        `[${requestId}] ${req.method} ${req.originalUrl} - Started`,
       );
     }
 
     // Track response time
-    res.on('finish', () => {
+    res.on("finish", () => {
       const [seconds, nanoseconds] = process.hrtime(startTime);
       const responseTimeMs = seconds * 1000 + nanoseconds / 1000000;
 
       // Add response time header safely (if not already sent)
       if (!res.headersSent) {
-        res.setHeader('X-Response-Time', `${responseTimeMs.toFixed(2)}ms`);
+        res.setHeader("X-Response-Time", `${responseTimeMs.toFixed(2)}ms`);
       }
 
       // Log slow requests
       if (responseTimeMs > PERFORMANCE_CONFIG.VERY_SLOW_REQUEST_THRESHOLD) {
         this.logger.warn(
-          `[${requestId}] ${req.method} ${req.originalUrl} - Very slow request: ${responseTimeMs.toFixed(2)}ms`
+          `[${requestId}] ${req.method} ${req.originalUrl} - Very slow request: ${responseTimeMs.toFixed(2)}ms`,
         );
 
         if (PERFORMANCE_CONFIG.DETAILED_LOGGING) {
@@ -73,11 +74,11 @@ export class PerformanceMiddleware implements NestMiddleware {
         }
       } else if (responseTimeMs > PERFORMANCE_CONFIG.SLOW_REQUEST_THRESHOLD) {
         this.logger.warn(
-          `[${requestId}] ${req.method} ${req.originalUrl} - Slow request: ${responseTimeMs.toFixed(2)}ms`
+          `[${requestId}] ${req.method} ${req.originalUrl} - Slow request: ${responseTimeMs.toFixed(2)}ms`,
         );
-      } else if (process.env.NODE_ENV === 'development') {
+      } else if (process.env.NODE_ENV === "development") {
         this.logger.debug(
-          `[${requestId}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${responseTimeMs.toFixed(2)}ms`
+          `[${requestId}] ${req.method} ${req.originalUrl} - ${res.statusCode} - ${responseTimeMs.toFixed(2)}ms`,
         );
       }
     });
@@ -91,7 +92,11 @@ export class PerformanceMiddleware implements NestMiddleware {
    * @returns Unique request ID
    */
   private generateRequestId(): string {
-    return `req-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    try {
+      return randomUUID();
+    } catch {
+      return `req-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    }
   }
 
   /**
@@ -99,7 +104,7 @@ export class PerformanceMiddleware implements NestMiddleware {
    * @param req - Express request object
    */
   private logRequestDetails(req: Request): void {
-    this.logger.debug('Request details:');
+    this.logger.debug("Request details:");
     this.logger.debug(`URL: ${req.originalUrl}`);
     this.logger.debug(`Method: ${req.method}`);
     this.logger.debug(`Headers: ${JSON.stringify(req.headers)}`);
@@ -113,7 +118,7 @@ export class PerformanceMiddleware implements NestMiddleware {
  */
 @Injectable()
 export class ResponseCacheMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('ResponseCacheMiddleware');
+  private readonly logger = new Logger("ResponseCacheMiddleware");
   private readonly cache = new Map<string, { data: any; expiry: number }>();
 
   use(req: Request, res: Response, next: NextFunction) {
@@ -123,7 +128,7 @@ export class ResponseCacheMiddleware implements NestMiddleware {
     }
 
     // Skip caching for non-GET requests
-    if (req.method !== 'GET') {
+    if (req.method !== "GET") {
       return next();
     }
 
@@ -139,14 +144,14 @@ export class ResponseCacheMiddleware implements NestMiddleware {
     const cachedResponse = this.cache.get(cacheKey);
     if (cachedResponse && cachedResponse.expiry > Date.now()) {
       // Add cache header
-      res.setHeader('X-Cache', 'HIT');
+      res.setHeader("X-Cache", "HIT");
 
       // Send cached response
       return res.json(cachedResponse.data);
     }
 
     // Add cache header
-    res.setHeader('X-Cache', 'MISS');
+    res.setHeader("X-Cache", "MISS");
 
     // Store original res.json method
     const originalJson = res.json;
@@ -165,9 +170,9 @@ export class ResponseCacheMiddleware implements NestMiddleware {
             expiry: Date.now() + cacheTime * 1000,
           });
 
-          if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV === "development") {
             this.logger.debug(
-              `Cached response for ${req.method} ${req.originalUrl} for ${cacheTime} seconds`
+              `Cached response for ${req.method} ${req.originalUrl} for ${cacheTime} seconds`,
             );
           }
         }
@@ -186,8 +191,8 @@ export class ResponseCacheMiddleware implements NestMiddleware {
    * @returns Cache key
    */
   private generateCacheKey(req: Request): string {
-  const authMarker = req.headers.authorization ? 'auth' : 'anon';
-  return `${req.method}:${authMarker}:${req.originalUrl}:${JSON.stringify(req.query)}`;
+    const authMarker = req.headers.authorization ? "auth" : "anon";
+    return `${req.method}:${authMarker}:${req.originalUrl}:${JSON.stringify(req.query)}`;
   }
 
   /**
@@ -198,17 +203,17 @@ export class ResponseCacheMiddleware implements NestMiddleware {
    */
   private getCacheTime(req: Request, res: Response): number {
     // Check for cache-control header in response
-    const cacheControl = res.getHeader('Cache-Control');
-    if (cacheControl && typeof cacheControl === 'string') {
-      const match = cacheControl.match(/max-age=(\d+)/);
-      if (match && match[1]) {
-        return parseInt(match[1], 10);
-      }
+    const cacheControl = res.getHeader("Cache-Control");
+    if (cacheControl && typeof cacheControl === "string") {
+      const regex = /max-age=(\d+)/;
+      const execResult = regex.exec(cacheControl);
+      const val = execResult?.[1];
+      if (val) return parseInt(val, 10);
     }
 
     // Check for x-cache-time header in request
-    const xCacheTime = req.headers['x-cache-time'];
-    if (xCacheTime && typeof xCacheTime === 'string') {
+    const xCacheTime = req.headers["x-cache-time"];
+    if (xCacheTime && typeof xCacheTime === "string") {
       const cacheTime = parseInt(xCacheTime, 10);
       if (!isNaN(cacheTime)) {
         return cacheTime;
@@ -224,7 +229,7 @@ export class ResponseCacheMiddleware implements NestMiddleware {
    */
   clearCache(): void {
     this.cache.clear();
-    this.logger.log('Response cache cleared');
+    this.logger.log("Response cache cleared");
   }
 
   /**
@@ -242,7 +247,9 @@ export class ResponseCacheMiddleware implements NestMiddleware {
       }
     }
 
-    this.logger.log(`Cleared ${count} cache entries matching pattern: ${pattern}`);
+    this.logger.log(
+      `Cleared ${count} cache entries matching pattern: ${pattern}`,
+    );
   }
 }
 
@@ -251,11 +258,11 @@ export class ResponseCacheMiddleware implements NestMiddleware {
  */
 @Injectable()
 export class QueryOptimizationMiddleware implements NestMiddleware {
-  private readonly logger = new Logger('QueryOptimizationMiddleware');
+  private readonly logger = new Logger("QueryOptimizationMiddleware");
 
   use(req: Request, res: Response, next: NextFunction) {
     // Add query optimization utilities to request object
-    req['optimizeQuery'] = {
+    req["optimizeQuery"] = {
       // Parse pagination parameters from request
       getPaginationParams: () => this.getPaginationParams(req),
       // Parse sorting parameters from request
@@ -272,7 +279,11 @@ export class QueryOptimizationMiddleware implements NestMiddleware {
    * @param req - Express request object
    * @returns Pagination parameters
    */
-  private getPaginationParams(req: Request): { page: number; limit: number; offset: number } {
+  private getPaginationParams(req: Request): {
+    page: number;
+    limit: number;
+    offset: number;
+  } {
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
     const offset = (page - 1) * limit;
@@ -285,9 +296,13 @@ export class QueryOptimizationMiddleware implements NestMiddleware {
    * @param req - Express request object
    * @returns Sorting parameters
    */
-  private getSortingParams(req: Request): { sortBy: string; sortOrder: 'ASC' | 'DESC' } {
-    const sortBy = (req.query.sortBy as string) || 'createdAt';
-    const sortOrder = ((req.query.sortOrder as string)?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC') as 'ASC' | 'DESC';
+  private getSortingParams(req: Request): {
+    sortBy: string;
+    sortOrder: "ASC" | "DESC";
+  } {
+    const sortBy = (req.query.sortBy as string) || "createdAt";
+    const sortOrder: "ASC" | "DESC" =
+      (req.query.sortOrder as string)?.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
     return { sortBy, sortOrder };
   }
@@ -303,13 +318,13 @@ export class QueryOptimizationMiddleware implements NestMiddleware {
       return [];
     }
 
-    return fields.split(',').map(field => field.trim());
+    return fields.split(",").map((field) => field.trim());
   }
 }
 
 /**
  * Example usage in app.module.ts:
- * 
+ *
  * @Module({
  *   imports: [...],
  *   controllers: [...],

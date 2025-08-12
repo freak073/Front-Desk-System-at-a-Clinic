@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsOptional, Length, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  Length,
+  Matches,
+} from "class-validator";
 
 export class CreatePatientDto {
   @IsString()
@@ -15,7 +21,8 @@ export class CreatePatientDto {
   @IsString()
   @Length(0, 50)
   @Matches(/^[A-Z0-9-]+$/, {
-    message: 'Medical record number must contain only uppercase letters, numbers, and hyphens',
+    message:
+      "Medical record number must contain only uppercase letters, numbers, and hyphens",
   })
   medicalRecordNumber?: string;
 }

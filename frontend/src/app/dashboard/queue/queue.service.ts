@@ -1,4 +1,5 @@
 import { apiService } from '../../../lib/api';
+import { unwrapEnvelope, unwrapWithMeta } from '../../../lib/unwrapEnvelope';
 import { QueueEntry, CreateQueueEntryDto, UpdateQueueEntryDto } from '../../../types';
 
 export interface QueueStats {
@@ -11,8 +12,9 @@ export interface QueueStats {
 
 export const fetchQueueEntries = async (): Promise<QueueEntry[]> => {
   try {
-    const response = await apiService.get<QueueEntry[]>('/queue');
-    return response.data || [];
+  const response = await apiService.get<any>('/queue');
+  const { data } = unwrapWithMeta<QueueEntry[]>(response);
+  return data || [];
   } catch (error) {
     console.error('Failed to fetch queue entries:', error);
     return [];
@@ -21,8 +23,8 @@ export const fetchQueueEntries = async (): Promise<QueueEntry[]> => {
 
 export const fetchCurrentQueue = async (): Promise<QueueEntry[]> => {
   try {
-    const response = await apiService.get<QueueEntry[]>('/queue/current');
-    return response.data || [];
+  const response = await apiService.get<any>('/queue/current');
+  return unwrapEnvelope<QueueEntry[]>(response) || [];
   } catch (error) {
     console.error('Failed to fetch current queue:', error);
     return [];
@@ -31,8 +33,8 @@ export const fetchCurrentQueue = async (): Promise<QueueEntry[]> => {
 
 export const fetchQueueStats = async (): Promise<QueueStats> => {
   try {
-    const response = await apiService.get<QueueStats>('/queue/stats');
-    return response.data || {
+    const response = await apiService.get<any>('/queue/stats');
+    return unwrapEnvelope<QueueStats>(response) || {
       totalWaiting: 0,
       totalWithDoctor: 0,
       totalCompleted: 0,
@@ -53,8 +55,9 @@ export const fetchQueueStats = async (): Promise<QueueStats> => {
 
 export const searchQueue = async (searchTerm: string): Promise<QueueEntry[]> => {
   try {
-    const response = await apiService.get<QueueEntry[]>('/queue', { search: searchTerm });
-    return response.data || [];
+  const response = await apiService.get<any>('/queue', { search: searchTerm });
+  const { data } = unwrapWithMeta<QueueEntry[]>(response);
+  return data || [];
   } catch (error) {
     console.error('Failed to search queue:', error);
     return [];
@@ -63,8 +66,8 @@ export const searchQueue = async (searchTerm: string): Promise<QueueEntry[]> => 
 
 export const addToQueue = async (data: CreateQueueEntryDto): Promise<QueueEntry | null> => {
   try {
-    const response = await apiService.post<QueueEntry>('/queue', data);
-    return response.data || null;
+  const response = await apiService.post<any>('/queue', data);
+  return unwrapEnvelope<QueueEntry | null>(response) || null;
   } catch (error) {
     console.error('Failed to add patient to queue:', error);
     return null;
@@ -73,8 +76,8 @@ export const addToQueue = async (data: CreateQueueEntryDto): Promise<QueueEntry 
 
 export const updateQueueEntryStatus = async (id: number, data: UpdateQueueEntryDto): Promise<QueueEntry | null> => {
   try {
-    const response = await apiService.patch<QueueEntry>(`/queue/${id}`, data);
-    return response.data || null;
+  const response = await apiService.patch<any>(`/queue/${id}`, data);
+  return unwrapEnvelope<QueueEntry | null>(response) || null;
   } catch (error) {
     console.error('Failed to update queue entry status:', error);
     return null;
@@ -83,7 +86,7 @@ export const updateQueueEntryStatus = async (id: number, data: UpdateQueueEntryD
 
 export const removeFromQueue = async (id: number): Promise<boolean> => {
   try {
-    await apiService.delete(`/queue/${id}`);
+  await apiService.delete(`/queue/${id}`);
     return true;
   } catch (error) {
     console.error('Failed to remove patient from queue:', error);
@@ -94,8 +97,8 @@ export const removeFromQueue = async (id: number): Promise<boolean> => {
 export const fetchPatients = async (): Promise<any[]> => {
   try {
   console.debug('[queue.fetchPatients] Requesting /patients');
-  const response = await apiService.get<any[]>('/patients');
-  const data = response.data || [];
+  const response = await apiService.get<any>('/patients');
+  const { data } = unwrapWithMeta<any[]>(response);
   console.debug('[queue.fetchPatients] Received patients:', Array.isArray(data) ? data.length : 'non-array');
   return data;
   } catch (error) {
@@ -106,8 +109,9 @@ export const fetchPatients = async (): Promise<any[]> => {
 
 export const searchPatients = async (searchTerm: string): Promise<any[]> => {
   try {
-    const response = await apiService.get<any[]>('/patients/search', { q: searchTerm });
-    return response.data || [];
+  const response = await apiService.get<any>('/patients/search', { q: searchTerm });
+  const { data } = unwrapWithMeta<any[]>(response);
+  return data || [];
   } catch (error) {
     console.error('Failed to search patients:', error);
     return [];

@@ -2,17 +2,17 @@
  * Error monitoring service for tracking and handling application errors
  */
 
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 /**
  * Error severity levels
  */
 export enum ErrorSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
@@ -60,24 +60,34 @@ export interface ErrorReport {
  */
 @Injectable()
 export class ErrorMonitoringService implements OnModuleInit {
-  private readonly logger = new Logger('ErrorMonitoringService');
+  private readonly logger = new Logger("ErrorMonitoringService");
   private readonly enabled: boolean;
   private readonly environment: string;
   private readonly errorStore: ErrorReport[] = [];
   private readonly maxStoredErrors: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.enabled = this.configService.get<string>('ERROR_MONITORING_ENABLED', 'true') === 'true';
-    this.environment = this.configService.get<string>('NODE_ENV', 'development');
-    this.maxStoredErrors = this.configService.get<number>('MAX_STORED_ERRORS', 100);
+    this.enabled =
+      this.configService.get<string>("ERROR_MONITORING_ENABLED", "true") ===
+      "true";
+    this.environment = this.configService.get<string>(
+      "NODE_ENV",
+      "development",
+    );
+    this.maxStoredErrors = this.configService.get<number>(
+      "MAX_STORED_ERRORS",
+      100,
+    );
   }
 
   onModuleInit() {
     if (this.enabled) {
       this.setupGlobalErrorHandlers();
-      this.logger.log(`Error monitoring service initialized in ${this.environment} environment`);
+      this.logger.log(
+        `Error monitoring service initialized in ${this.environment} environment`,
+      );
     } else {
-      this.logger.log('Error monitoring service is disabled');
+      this.logger.log("Error monitoring service is disabled");
     }
   }
 
@@ -86,14 +96,16 @@ export class ErrorMonitoringService implements OnModuleInit {
    */
   private setupGlobalErrorHandlers() {
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      this.captureError(error, ErrorSeverity.CRITICAL, { source: 'uncaughtException' });
-      
+    process.on("uncaughtException", (error) => {
+      this.captureError(error, ErrorSeverity.CRITICAL, {
+        source: "uncaughtException",
+      });
+
       // Log the error
       this.logger.error(`Uncaught Exception: ${error.message}`, error.stack);
-      
+
       // In production, we might want to gracefully shut down the application
-      if (this.environment === 'production') {
+      if (this.environment === "production") {
         // Give the error reporting some time to complete
         setTimeout(() => {
           process.exit(1);
@@ -102,10 +114,13 @@ export class ErrorMonitoringService implements OnModuleInit {
     });
 
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason: any) => {
-      const error = reason instanceof Error ? reason : new Error(String(reason));
-      this.captureError(error, ErrorSeverity.HIGH, { source: 'unhandledRejection' });
-      
+    process.on("unhandledRejection", (reason: any) => {
+      const error =
+        reason instanceof Error ? reason : new Error(String(reason));
+      this.captureError(error, ErrorSeverity.HIGH, {
+        source: "unhandledRejection",
+      });
+
       // Log the error
       this.logger.error(`Unhandled Rejection: ${error.message}`, error.stack);
     });
@@ -117,7 +132,11 @@ export class ErrorMonitoringService implements OnModuleInit {
    * @param severity - Error severity
    * @param context - Error context
    */
-  captureError(error: Error, severity: ErrorSeverity = ErrorSeverity.MEDIUM, context?: ErrorContext): void {
+  captureError(
+    error: Error,
+    severity: ErrorSeverity = ErrorSeverity.MEDIUM,
+    context?: ErrorContext,
+  ): void {
     if (!this.enabled) {
       return;
     }
@@ -147,7 +166,7 @@ export class ErrorMonitoringService implements OnModuleInit {
    */
   private storeError(errorReport: ErrorReport): void {
     this.errorStore.push(errorReport);
-    
+
     // Limit the number of stored errors
     if (this.errorStore.length > this.maxStoredErrors) {
       this.errorStore.shift(); // Remove the oldest error
@@ -160,7 +179,7 @@ export class ErrorMonitoringService implements OnModuleInit {
    */
   private logError(errorReport: ErrorReport): void {
     const { message, stack, severity } = errorReport;
-    
+
     switch (severity) {
       case ErrorSeverity.CRITICAL:
         this.logger.error(`CRITICAL ERROR: ${message}`, stack);
@@ -194,9 +213,12 @@ export class ErrorMonitoringService implements OnModuleInit {
    * @param limit - Maximum number of errors to return
    * @returns Error reports with specified severity
    */
-  getErrorsBySeverity(severity: ErrorSeverity, limit: number = 10): ErrorReport[] {
+  getErrorsBySeverity(
+    severity: ErrorSeverity,
+    limit: number = 10,
+  ): ErrorReport[] {
     return this.errorStore
-      .filter(error => error.severity === severity)
+      .filter((error) => error.severity === severity)
       .slice(-limit)
       .reverse();
   }
@@ -206,7 +228,7 @@ export class ErrorMonitoringService implements OnModuleInit {
    */
   clearErrors(): void {
     this.errorStore.length = 0;
-    this.logger.log('Error store cleared');
+    this.logger.log("Error store cleared");
   }
 
   /**
@@ -223,23 +245,26 @@ export class ErrorMonitoringService implements OnModuleInit {
     };
 
     // Count errors by severity
-    this.errorStore.forEach(error => {
+    this.errorStore.forEach((error) => {
       bySeverity[error.severity]++;
     });
 
     // Get the most recent error
-    const mostRecentError = this.errorStore.length > 0
-      ? this.errorStore[this.errorStore.length - 1]
-      : null;
+    const mostRecentError =
+      this.errorStore.length > 0
+        ? this.errorStore[this.errorStore.length - 1]
+        : null;
 
     return {
       totalErrors,
       bySeverity,
-      mostRecentError: mostRecentError ? {
-        message: mostRecentError.message,
-        severity: mostRecentError.severity,
-        timestamp: mostRecentError.timestamp,
-      } : null,
+      mostRecentError: mostRecentError
+        ? {
+            message: mostRecentError.message,
+            severity: mostRecentError.severity,
+            timestamp: mostRecentError.timestamp,
+          }
+        : null,
     };
   }
 }

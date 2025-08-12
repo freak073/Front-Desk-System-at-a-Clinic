@@ -23,13 +23,8 @@ const QueueManagementPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const { data: queueData, isLoading, isError, error, refetch } = useQueueUpdates(page, pageSize);
   const queryClient = useQueryClient();
-  const queueEntriesRaw: any = queueData?.data;
-  let fetchedQueue: any[] = [];
-  if (Array.isArray(queueEntriesRaw?.data)) {
-    fetchedQueue = queueEntriesRaw.data;
-  } else if (Array.isArray(queueEntriesRaw)) {
-    fetchedQueue = queueEntriesRaw;
-  }
+  const queueEnvelope: any = queueData?.data;
+  const fetchedQueue: any[] = Array.isArray(queueEnvelope?.data) ? queueEnvelope.data : Array.isArray(queueEnvelope) ? queueEnvelope : [];
   const [localQueue, setLocalQueue] = useState<any[]>([]);
   // sync local queue when fresh data arrives (length or ids change)
   useEffect(() => {
@@ -37,7 +32,7 @@ const QueueManagementPage = () => {
       setLocalQueue(fetchedQueue.map(e => ({ ...e })));
     }
   }, [fetchedQueue.length]);
-  const totalQueue = queueEntriesRaw?.meta?.total || localQueue.length;
+  const totalQueue = queueEnvelope?.meta?.total || localQueue.length;
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');

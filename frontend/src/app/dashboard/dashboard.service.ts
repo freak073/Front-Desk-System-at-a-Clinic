@@ -1,4 +1,5 @@
 import { apiService } from '../../lib/api';
+import { unwrapEnvelope } from '../../lib/unwrapEnvelope';
 
 export interface DashboardStats {
   queueCount: number;
@@ -9,8 +10,9 @@ export interface DashboardStats {
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   try {
-    const response = await apiService.get<{ data: DashboardStats }>('/dashboard/stats');
-    return response?.data?.data ?? {
+    const response = await apiService.get<any>('/dashboard/stats');
+    const stats = unwrapEnvelope<DashboardStats | undefined>(response);
+    return stats ?? {
       queueCount: 0,
       todayAppointments: 0,
       availableDoctors: 0,

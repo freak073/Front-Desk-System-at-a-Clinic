@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
-  `role` enum('front_desk') NOT NULL DEFAULT 'front_desk',
+  `role` enum('admin','staff') NOT NULL DEFAULT 'staff',
+  `full_name` varchar(100) DEFAULT NULL,
   `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`id`),
@@ -83,9 +84,10 @@ CREATE TABLE IF NOT EXISTS `appointments` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Insert sample data
--- Default user (admin/admin123)
-INSERT IGNORE INTO `users` (`username`, `password_hash`, `role`) VALUES 
-('admin', '$2b$10$rOzJqQqQqQqQqQqQqQqQqOzJqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQ', 'front_desk');
+-- Default users (admin/Admin123, staff/Staff123)
+INSERT IGNORE INTO `users` (`username`, `password_hash`, `role`, `full_name`) VALUES 
+('admin', '$2b$10$K8BEyIXjyqOVqiw4.O.WG.abxD8YI4rU.rHxw5fxvjy4YQFGZQFGZ', 'admin', 'System Administrator'),
+('staff', '$2b$10$K8BEyIXjyqOVqiw4.O.WG.abxD8YI4rU.rHxw5fxvjy4YQFGZQFGZ', 'staff', 'Front Desk Staff');
 
 -- Sample doctors
 INSERT IGNORE INTO `doctors` (`id`, `name`, `specialization`, `gender`, `location`, `status`, `availability_schedule`) VALUES
@@ -124,4 +126,4 @@ COMMIT;
 
 -- Display success message
 SELECT 'Database setup completed successfully!' as message;
-SELECT 'Default login: admin / admin123' as credentials;
+SELECT 'Default logins: admin/Admin123, staff/Staff123' as credentials;

@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
-import { Patient } from '../entities/patient.entity';
-import { CreatePatientDto, UpdatePatientDto, PatientQueryDto } from './dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Like } from "typeorm";
+import { Patient } from "../entities/patient.entity";
+import { CreatePatientDto, UpdatePatientDto, PatientQueryDto } from "./dto";
 
 @Injectable()
 export class PatientsService {
@@ -18,9 +23,9 @@ export class PatientsService {
         const existingPatient = await this.patientRepository.findOne({
           where: { medicalRecordNumber: createPatientDto.medicalRecordNumber },
         });
-        
+
         if (existingPatient) {
-          throw new ConflictException('Medical record number already exists');
+          throw new ConflictException("Medical record number already exists");
         }
       }
 
@@ -30,33 +35,36 @@ export class PatientsService {
       if (error instanceof ConflictException) {
         throw error;
       }
-      throw new BadRequestException('Failed to create patient');
+      throw new BadRequestException("Failed to create patient");
     }
   }
 
   async findAll(query?: PatientQueryDto): Promise<Patient[]> {
-    const queryBuilder = this.patientRepository.createQueryBuilder('patient');
+    const queryBuilder = this.patientRepository.createQueryBuilder("patient");
 
     if (query?.search) {
       queryBuilder.andWhere(
-        '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
+        "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
         { search: `%${query.search}%` },
       );
     }
 
     if (query?.name) {
-      queryBuilder.andWhere('patient.name LIKE :name', {
+      queryBuilder.andWhere("patient.name LIKE :name", {
         name: `%${query.name}%`,
       });
     }
 
     if (query?.medicalRecordNumber) {
-      queryBuilder.andWhere('patient.medicalRecordNumber = :medicalRecordNumber', {
-        medicalRecordNumber: query.medicalRecordNumber,
-      });
+      queryBuilder.andWhere(
+        "patient.medicalRecordNumber = :medicalRecordNumber",
+        {
+          medicalRecordNumber: query.medicalRecordNumber,
+        },
+      );
     }
 
-    return await queryBuilder.orderBy('patient.name', 'ASC').getMany();
+    return await queryBuilder.orderBy("patient.name", "ASC").getMany();
   }
 
   async findOne(id: number): Promise<Patient> {
@@ -67,37 +75,46 @@ export class PatientsService {
     return patient;
   }
 
-  async findByMedicalRecordNumber(medicalRecordNumber: string): Promise<Patient> {
+  async findByMedicalRecordNumber(
+    medicalRecordNumber: string,
+  ): Promise<Patient> {
     const patient = await this.patientRepository.findOne({
       where: { medicalRecordNumber },
     });
     if (!patient) {
-      throw new NotFoundException(`Patient with medical record number ${medicalRecordNumber} not found`);
+      throw new NotFoundException(
+        `Patient with medical record number ${medicalRecordNumber} not found`,
+      );
     }
     return patient;
   }
 
-  async update(id: number, updatePatientDto: UpdatePatientDto): Promise<Patient> {
+  async update(
+    id: number,
+    updatePatientDto: UpdatePatientDto,
+  ): Promise<Patient> {
     const patient = await this.findOne(id);
 
     // Check for medical record number uniqueness if being updated
-    if (updatePatientDto.medicalRecordNumber && 
-        updatePatientDto.medicalRecordNumber !== patient.medicalRecordNumber) {
+    if (
+      updatePatientDto.medicalRecordNumber &&
+      updatePatientDto.medicalRecordNumber !== patient.medicalRecordNumber
+    ) {
       const existingPatient = await this.patientRepository.findOne({
         where: { medicalRecordNumber: updatePatientDto.medicalRecordNumber },
       });
-      
+
       if (existingPatient) {
-        throw new ConflictException('Medical record number already exists');
+        throw new ConflictException("Medical record number already exists");
       }
     }
 
     Object.assign(patient, updatePatientDto);
-    
+
     try {
       return await this.patientRepository.save(patient);
     } catch (error) {
-      throw new BadRequestException('Failed to update patient');
+      throw new BadRequestException("Failed to update patient");
     }
   }
 
@@ -111,28 +128,31 @@ export class PatientsService {
       return [];
     }
 
-    const queryBuilder = this.patientRepository.createQueryBuilder('patient');
-    
+    const queryBuilder = this.patientRepository.createQueryBuilder("patient");
+
     queryBuilder.where(
-      '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
+      "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
       { search: `%${searchTerm.trim()}%` },
     );
 
     return await queryBuilder
-      .orderBy('patient.name', 'ASC')
+      .orderBy("patient.name", "ASC")
       .limit(50) // Limit results for performance
       .getMany();
   }
 
-  async validateMedicalRecordNumber(medicalRecordNumber: string, excludeId?: number): Promise<boolean> {
-    const queryBuilder = this.patientRepository.createQueryBuilder('patient');
-    
-    queryBuilder.where('patient.medicalRecordNumber = :medicalRecordNumber', {
+  async validateMedicalRecordNumber(
+    medicalRecordNumber: string,
+    excludeId?: number,
+  ): Promise<boolean> {
+    const queryBuilder = this.patientRepository.createQueryBuilder("patient");
+
+    queryBuilder.where("patient.medicalRecordNumber = :medicalRecordNumber", {
       medicalRecordNumber,
     });
 
     if (excludeId) {
-      queryBuilder.andWhere('patient.id != :excludeId', { excludeId });
+      queryBuilder.andWhere("patient.id != :excludeId", { excludeId });
     }
 
     const existingPatient = await queryBuilder.getOne();

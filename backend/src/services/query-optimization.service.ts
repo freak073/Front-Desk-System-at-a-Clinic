@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Injectable } from "@nestjs/common";
+import { Repository, SelectQueryBuilder } from "typeorm";
 import {
   PaginationParams,
   PaginatedResponse,
@@ -7,7 +7,7 @@ import {
   paginateQueryBuilder,
   selectOptimizedFields,
   createOptimizedQueryBuilder,
-} from '../utils/query-optimization';
+} from "../utils/query-optimization";
 
 @Injectable()
 export class QueryOptimizationService {
@@ -16,14 +16,19 @@ export class QueryOptimizationService {
     paginationParams: PaginationParams,
     where?: any,
     relations?: string[],
-    select?: (keyof T)[]
+    select?: (keyof T)[],
   ): Promise<PaginatedResponse<T>> {
-    return paginateAndSort(repository, { paginationParams, where, relations, select });
+    return paginateAndSort(repository, {
+      paginationParams,
+      where,
+      relations,
+      select,
+    });
   }
 
   async getPaginatedFromQueryBuilder<T>(
     queryBuilder: SelectQueryBuilder<T>,
-    paginationParams: PaginationParams
+    paginationParams: PaginationParams,
   ): Promise<PaginatedResponse<T>> {
     return paginateQueryBuilder(queryBuilder, paginationParams);
   }
@@ -31,7 +36,7 @@ export class QueryOptimizationService {
   async getSelectedFields<T>(
     repository: Repository<T>,
     fields: (keyof T)[],
-    where?: any
+    where?: any,
   ): Promise<Partial<T>[]> {
     return selectOptimizedFields(repository, fields, where);
   }
@@ -39,7 +44,7 @@ export class QueryOptimizationService {
   createOptimizedQB<T>(
     repository: Repository<T>,
     alias: string,
-    relations: Array<{ property: string; alias: string }>
+    relations: Array<{ property: string; alias: string }>,
   ): SelectQueryBuilder<T> {
     return createOptimizedQueryBuilder(repository, alias, relations);
   }

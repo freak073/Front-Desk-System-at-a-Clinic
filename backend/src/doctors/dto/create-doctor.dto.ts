@@ -1,4 +1,10 @@
-import { IsString, IsEnum, IsNotEmpty, IsOptional, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsObject,
+} from "class-validator";
 
 export class CreateDoctorDto {
   @IsString()
@@ -9,7 +15,7 @@ export class CreateDoctorDto {
   @IsNotEmpty()
   specialization: string;
 
-  @IsEnum(['male', 'female', 'other'])
+  @IsEnum(["male", "female", "other"])
   gender: string;
 
   @IsString()
@@ -21,6 +27,6 @@ export class CreateDoctorDto {
   availabilitySchedule?: object;
 
   @IsOptional()
-  @IsEnum(['available', 'busy', 'off_duty'])
+  @IsEnum(["available", "busy", "off_duty"])
   status?: string;
 }

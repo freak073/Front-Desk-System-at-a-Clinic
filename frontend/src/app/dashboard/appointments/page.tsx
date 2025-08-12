@@ -364,7 +364,28 @@ const AppointmentsPage = () => {
                             className="text-accent-400 hover:text-accent-300"
                             disabled={appointment.status !== 'booked'}
                           >
-      {/* Appointment Detail Modal */}
+                            Reschedule
+                          </button>
+                          <button
+                            onClick={() => handleCancelAppointment(appointment.id)}
+                            disabled={appointment.status === 'canceled' || appointment.status === 'completed'}
+                            className={`text-red-400 hover:text-red-300 ${
+                              (appointment.status === 'canceled' || appointment.status === 'completed')
+                                ? 'opacity-50 cursor-not-allowed'
+                                : ''
+                            }`}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    )}
+                  />
+                )}
+              </tbody>
+            </table>
+      {/* Appointment Detail Modal (moved outside table to avoid hydration issues) */}
       <Modal
         isOpen={!!detailAppointment}
         onClose={() => setDetailAppointment(null)}
@@ -431,27 +452,7 @@ const AppointmentsPage = () => {
           </div>
         )}
       </Modal>
-                            Reschedule
-                          </button>
-                          <button
-                            onClick={() => handleCancelAppointment(appointment.id)}
-                            disabled={appointment.status === 'canceled' || appointment.status === 'completed'}
-                            className={`text-red-400 hover:text-red-300 ${
-                              (appointment.status === 'canceled' || appointment.status === 'completed')
-                                ? 'opacity-50 cursor-not-allowed'
-                                : ''
-                            }`}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    )}
-                  />
-                )}
-              </tbody>
-            </table>
+
       {/* Reschedule Modal */}
       <Modal
         isOpen={!!rescheduleAppointment}
