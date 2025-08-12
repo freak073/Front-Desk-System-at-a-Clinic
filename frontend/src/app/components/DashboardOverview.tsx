@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { DashboardStats } from '../dashboard/dashboard.service';
 
 interface DashboardOverviewProps {
@@ -9,6 +10,26 @@ interface DashboardOverviewProps {
 }
 
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, isLoading = false }) => {
+  const router = useRouter();
+
+  const handleQuickAction = (action: string) => {
+    // Add a small delay to provide visual feedback
+    setTimeout(() => {
+      switch (action) {
+        case 'add-to-queue':
+          router.push('/dashboard/queue');
+          break;
+        case 'schedule-appointment':
+          router.push('/dashboard/appointments');
+          break;
+        case 'manage-doctors':
+          router.push('/dashboard/doctors');
+          break;
+        default:
+          break;
+      }
+    }, 100);
+  };
   const statCards = [
     {
       title: 'Patients in Queue',
@@ -81,40 +102,80 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats, isLoading 
   return (
     <div className="mb-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {statCards.map((card, index) => (
-          <div
-            key={index}
-            className={`bg-surface-800 border ${card.borderColor} rounded-lg p-6 transition-all duration-200 hover:shadow-lg hover:scale-105`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-400 mb-1">{card.title}</p>
-                <p className="text-2xl font-bold text-white">{card.value}</p>
+        {statCards.map((card, index) => {
+          const getCardAction = (title: string) => {
+            if (title.includes('Queue')) return 'add-to-queue';
+            if (title.includes('Appointments')) return 'schedule-appointment';
+            if (title.includes('Doctors')) return 'manage-doctors';
+            return null;
+          };
+
+          const cardAction = getCardAction(card.title);
+          const isClickable = cardAction !== null;
+
+          return (
+            <div
+              key={index}
+              onClick={isClickable ? () => handleQuickAction(cardAction) : undefined}
+              className={`bg-surface-800 border ${card.borderColor} rounded-lg p-6 transition-all duration-200 hover:shadow-lg hover:scale-105 ${isClickable ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-500 active:scale-100 active:shadow-md' : ''
+                }`}
+              role={isClickable ? 'button' : undefined}
+              tabIndex={isClickable ? 0 : undefined}
+              onKeyDown={isClickable ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleQuickAction(cardAction);
+                }
+              } : undefined}
+              aria-label={isClickable ? `Navigate to ${card.title}` : undefined}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-400 mb-1">{card.title}</p>
+                  <p className="text-2xl font-bold text-white">{card.value}</p>
+                </div>
+                <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center ${card.color}`}>
+                  {card.icon}
+                </div>
               </div>
-              <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center ${card.color}`}>
-                {card.icon}
-              </div>
+              {isClickable && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Click to manage
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="bg-surface-800 border border-gray-700 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button className="btn-primary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-accent-500 transition-colors">
+          <button
+            onClick={() => handleQuickAction('add-to-queue')}
+            className="btn-primary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-accent-500 active:bg-accent-700 active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            aria-label="Add Patient to Queue"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             <span>Add Patient to Queue</span>
           </button>
-          <button className="btn-secondary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-surface-600 transition-colors">
+          <button
+            onClick={() => handleQuickAction('schedule-appointment')}
+            className="btn-secondary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-surface-600 active:bg-surface-500 active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            aria-label="Schedule Appointment"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <span>Schedule Appointment</span>
           </button>
-          <button className="btn-secondary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-surface-600 transition-colors">
+          <button
+            onClick={() => handleQuickAction('manage-doctors')}
+            className="btn-secondary text-left p-4 rounded-lg flex items-center space-x-3 hover:bg-surface-600 active:bg-surface-500 active:scale-95 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            aria-label="Manage Doctors"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>

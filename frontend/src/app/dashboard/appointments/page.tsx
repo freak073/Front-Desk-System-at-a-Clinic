@@ -1,64 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
-import Modal from '../../components/Modal';
-import AppointmentRescheduleForm from '../components/AppointmentRescheduleForm';
-import dynamic from 'next/dynamic';
-const MonthlyCalendar = dynamic(()=> import('../components/MonthlyCalendar'), { ssr:false });
-import AppointmentForm from '../../components/AppointmentForm';
-import DoctorCard from '../../components/DoctorCard';
-
-import { updateAppointment, fetchDoctors, fetchPatients, createAppointment, cancelAppointment, fetchDoctorById, searchAppointmentsAdvanced, updateDoctorSchedule } from './appointments.service';
-import { useAppointmentUpdates } from '../../hooks/useRealTimeUpdates';
-import { useAppointmentSearchAndFilter } from '../../hooks/useSearchAndFilter';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from 'react-query';
+import { useAuth } from '../../../context/AuthContext';
+import { useAppointmentUpdates, useNotifications } from '../../hooks/useRealTimeUpdates';
+import { useGlobalState } from '../../../context/GlobalStateContext';
+import { useOptimisticMutation } from '../../hooks/useOptimisticMutation';
+import { useAppointmentSearchAndFilter } from '../../hooks/useSearchAndFilter';
 import { logMetric } from '../../../lib/metrics';
+import { PageLoading, ErrorState, EmptyState, LoadingButton } from '../../components/LoadingStates';
+import { SyncStatusIndicator } from '../../components/SyncStatusIndicator';
+
+import Modal from '../../components/Modal';
+import { createAppointment, updateAppointment, cancelAppointment, fetchDoctors, fetchPatients } from './appointments.service';
+import { CreateAppointmentDto, UpdateAppointmentDto } from '../../../types';
 
 import SearchablePagination from '../../components/SearchablePagination';
-import SearchResults from '../../components/SearchResults';
-// removed duplicate import & unused apiService
-import { Doctor, Patient, CreateAppointmentDto, Appointment } from '../../../types';
+import { apiService } from '../../../lib/api';
 import { highlightMatch } from '../../components/highlight';
 import FilterBar from '../../components/FilterBar';
-import DoctorScheduleForm from '../../components/DoctorScheduleForm';
+import SearchResults from '../../components/SearchResults';
 
 const AppointmentsPage = () => {
-  const { user, loading: authLoading } = useAuth(); // ensure auth context utilized
-  React.useEffect(()=>{ const start = performance.now(); return () => { logMetric({ name:'appointments_page_time', duration: performance.now()-start, timestamp: Date.now() }); }; }, []);
+  const { user, loading: authLoading } = useAuth();
+  React.useEffect(()=> { const t = performance.now(); return () => { logMetric({ name:'appointments_page_time', duration: performance.now()-t, timestamp: Date.now() }); }; }, []);
+  const { showSuccess, showError, notifyDataUpdate, notifyDataError } = useNotifications();
+  const { setLoadingState, setErrorState, isLoading: globalIsLoading } = useGlobalState();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { data: appointmentsData, isLoading, refetch } = useAppointmentUpdates(page, pageSize);
+  const { data: appointmentsData, isLoading, isError, error, refetch, syncStatus } = useAppointmentUpdates(page, pageSize, undefined, {
+    onSuccess: () => setErrorState('appointments', null),
+    onError: (error) => setErrorState('appointments', error.message),
+  });
   const queryClient = useQueryClient();
-  const appointmentsRaw: any = appointmentsData?.data;
-  let appointments: any[] = [];
-  if (Array.isArray(appointmentsRaw?.data)) {
-    appointments = appointmentsRaw.data;
-  } else if (Array.isArray(appointmentsRaw)) {
-    appointments = appointmentsRaw;
-  }
-  // Local copy to enable optimistic UI updates without mutating source objects directly
-  const [localAppointments, setLocalAppointments] = useState<Appointment[]>([] as any);
-  // Guarded effect to prevent infinite render loops when upstream wrapper identities churn
-  React.useEffect(() => {
-    setLocalAppointments(prev => {
-      if (prev.length === appointments.length && prev.every((p, i) => p.id === appointments[i].id && p.status === appointments[i].status)) {
-        return prev; // no structural/status change
-      }
-      return appointments.map(a => ({ ...a }));
-    });
-  }, [appointments.map(a => a.id + ':' + a.status).join('|')]);
-  const total = appointmentsRaw?.meta?.total || appointments.length;
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
-  const [showNewAppointmentModal, setShowNewAppointmentModal] = useState(false);
-  const [showDoctorScheduleModal, setShowDoctorScheduleModal] = useState(false);
-  const [doctorScheduleDirty, setDoctorScheduleDirty] = useState(false);
-  const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
-  const [detailAppointment, setDetailAppointment] = useState<Appointment | null>(null);
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const appointmentsEnvelope: any = appointmentsData?.data;
+  const fetchedAppointments: any[] = Array.isArray(appointmentsEnvelope?.data) ? appointmentsEnvelope.data : Array.isArray(appointmentsEnvelope) ? appointmentsEnvelope : [];
+  const [localAppointments, setLocalAppointments] = useState<any[]>([]);
+  // sync local appointments when fresh data arrives (length or ids change)
+  useEffect(() => {
+    if (fetchedAppointments.length) {
+      setLocalAppointments(fetchedAppointments.map(e => ({ ...e })));
+    }
+  }, [fetchedAppointments.length]);
+  const totalAppointments = appointmentsEnvelope?.meta?.total || localAppointments.length;
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newPatientName, setNewPatientName] = useState('');
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
+  const [availablePatients, setAvailablePatients] = useState<any[]>([]);
 
   // Enhanced search and filter functionality
   const searchAndFilter = useAppointmentSearchAndFilter(localAppointments);
@@ -71,56 +63,25 @@ const AppointmentsPage = () => {
     resultCount
   } = searchAndFilter;
 
-  // Search appointments when search term or filters change
-  React.useEffect(() => {
-    const searchAppointmentsDebounced = async () => {
-      if (debouncedSearchTerm || filters.status !== 'all' || filters.doctorId !== 'all' || filters.date) {
-        try {
-          const found = await searchAppointmentsAdvanced(
-            debouncedSearchTerm,
-            filters.status !== 'all' ? filters.status : undefined,
-            filters.date || undefined,
-            filters.date || undefined
-          );
-          if (found) setSearchResults(found);
-        } catch (err) {
-          console.error('Error searching appointments:', err);
-        }
-      } else {
-        setSearchResults(null);
-        refetch();
-      }
-    };
-    searchAppointmentsDebounced();
-  }, [debouncedSearchTerm, filters.status, filters.doctorId, filters.date]);
-
-  // Fetch doctors and patients after auth ready
-  React.useEffect(() => {
+  // Fetch doctors and patients when component mounts
+  useEffect(() => {
     if (authLoading || !user) return;
     let cancelled = false;
-    const load = async () => {
+    const fetchData = async () => {
       try {
-        const [doctorsData, patientsData] = await Promise.all([
+        const [doctors, patients] = await Promise.all([
           fetchDoctors(),
           fetchPatients()
         ]);
-        if (cancelled) return;
-        setDoctors(doctorsData);
-        setPatients(patientsData);
-        console.debug('[AppointmentsPage] doctors:', doctorsData.length, 'patients:', patientsData.length);
-        if (patientsData.length === 0) {
-          setTimeout(async () => {
-            if (cancelled) return;
-            const retryPatients = await fetchPatients();
-            console.debug('[AppointmentsPage] patients retry length:', retryPatients.length);
-            if (retryPatients.length) setPatients(retryPatients);
-          }, 600);
+        if (!cancelled) {
+          setAvailableDoctors(doctors);
+          setAvailablePatients(patients);
         }
       } catch (err) {
-        if (!cancelled) console.error('[AppointmentsPage] Error fetching doctors/patients:', err);
+        if (!cancelled) console.error('[AppointmentsPage] Error fetching data:', err);
       }
     };
-    load();
+    fetchData();
     return () => { cancelled = true; };
   }, [authLoading, user]);
 
@@ -134,22 +95,97 @@ const AppointmentsPage = () => {
 
   const doctorOptions = [
     { value: 'all', label: 'All Doctors', count: localAppointments.length },
-    ...doctors.map(doctor => ({
+    ...availableDoctors.map(doctor => ({
       value: doctor.id.toString(),
       label: doctor.name,
       count: localAppointments.filter(a => a.doctorId === doctor.id).length
     }))
   ];
 
-  const handleCreateAppointment = async (data: CreateAppointmentDto) => {
+  // Enhanced optimistic mutation for creating appointments
+  const createAppointmentMutation = useOptimisticMutation(
+    async (variables: CreateAppointmentDto) => {
+      return await createAppointment(variables);
+    },
+    {
+      queryKey: ['appointments', page, pageSize],
+      updateFn: (oldData: any, variables) => {
+        if (!oldData?.data?.data) return oldData;
+        const newAppointment = {
+          id: Date.now(), // temporary ID
+          ...variables,
+          status: 'booked',
+          patient: availablePatients.find(p => p.id === variables.patientId) || { name: 'Unknown' },
+          doctor: availableDoctors.find(d => d.id === variables.doctorId) || { name: 'Unknown' }
+        };
+        return {
+          ...oldData,
+          data: {
+            ...oldData.data,
+            data: [newAppointment, ...oldData.data.data]
+          }
+        };
+      },
+      optimisticUpdateType: 'create',
+      successMessage: 'Appointment created successfully',
+      errorMessage: 'Failed to create appointment',
+    }
+  );
+
+  const handleCreateAppointment = async () => {
+    setLoadingState('appointments', true);
     try {
-      const newAppointment = await createAppointment(data);
-      if (newAppointment) {
-        setShowNewAppointmentModal(false);
-        refetch();
+      let patientId: number | null = null;
+      if (selectedPatientId) {
+        patientId = parseInt(selectedPatientId, 10);
+      } else if (newPatientName.trim()) {
+        const createRes = await apiService.post<any>('/patients', { name: newPatientName.trim() });
+        if (createRes?.data?.id) patientId = createRes.data.id as unknown as number;
       }
+      if (!patientId || !selectedDoctorId || !appointmentDate || !appointmentTime) {
+        showError('Please fill in all required fields');
+        return;
+      }
+      
+      const appointmentData: CreateAppointmentDto = {
+        patientId,
+        doctorId: parseInt(selectedDoctorId, 10),
+        appointmentDatetime: `${appointmentDate}T${appointmentTime}:00.000Z`
+      };
+      
+      await createAppointmentMutation.mutateAsync(appointmentData);
+      
+      setNewPatientName('');
+      setSelectedPatientId('');
+      setSelectedDoctorId('');
+      setAppointmentDate('');
+      setAppointmentTime('');
+      setShowAddModal(false);
+      notifyDataUpdate('appointments', 'created');
     } catch (err) {
       console.error('Error creating appointment:', err);
+      notifyDataError('appointments', 'create', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoadingState('appointments', false);
+    }
+  };
+
+  const handleStatusChange = async (id: number, status: string) => {
+    const prevAppointments = localAppointments.map(a => ({ ...a }));
+    // optimistic update
+    setLocalAppointments(a => a.map(app => app.id === id ? { ...app, status } : app));
+    try {
+      const updateData: UpdateAppointmentDto = { status: status as 'booked' | 'completed' | 'canceled' };
+      const result = await updateAppointment(id, updateData);
+      if (result) {
+        showSuccess('Appointment status updated');
+        queryClient.invalidateQueries('appointments');
+        refetch();
+      } else throw new Error('No result');
+    } catch (err) {
+      console.error('[AppointmentsPage] update status failed', err);
+      setLocalAppointments(prevAppointments); // rollback
+      showError('Failed to update appointment status');
     }
   };
 
@@ -157,447 +193,289 @@ const AppointmentsPage = () => {
     try {
       const success = await cancelAppointment(id);
       if (success) {
+        showSuccess('Appointment cancelled successfully');
+        queryClient.invalidateQueries('appointments');
         refetch();
       }
     } catch (err) {
-      console.error('Error canceling appointment:', err);
+      console.error('Error cancelling appointment:', err);
+      showError('Failed to cancel appointment');
     }
   };
 
-  const handleViewDoctorSchedule = async (doctorId: number) => {
-    try {
-      const doctor = await fetchDoctorById(doctorId);
-      if (doctor) {
-        setSelectedDoctor(doctor);
-        setShowDoctorScheduleModal(true);
-      }
-    } catch (err) {
-      console.error('Error fetching doctor:', err);
-    }
-  };
+  const isInitialLoading = (authLoading || (isLoading && localAppointments.length === 0));
+  if (isInitialLoading) {
+    return (
+      <PageLoading 
+        message="Loading appointments..." 
+        skeletonType="table" 
+        skeletonCount={6} 
+      />
+    );
+  }
 
-  const handleEditDoctor = (doctorId: number) => {
-    // Implementation for editing doctor
-    console.log('Edit doctor:', doctorId);
-  };
-
-  const handleDeleteDoctor = (doctorId: number) => {
-    // Implementation for deleting doctor
-    console.log('Delete doctor:', doctorId);
-  };
-
-  const applyAppointmentStatus = async (appointmentId: number, newStatus: Appointment['status'], currentStatus: Appointment['status']) => {
-    setLocalAppointments(list => list.map(a => a.id === appointmentId ? { ...a, status: newStatus } : a));
-    try {
-      await updateAppointment(appointmentId, { status: newStatus });
-      queryClient.invalidateQueries('appointments');
-    } catch (err) {
-      console.error('[AppointmentsPage] status update failed', err);
-      setLocalAppointments(list => list.map(a => a.id === appointmentId ? { ...a, status: currentStatus } : a));
-    }
-  };
-
-  if (isLoading || authLoading) {
+  if (isError) {
     return (
       <div className="p-8">
-        <div className="grid gap-4">
-          {[...Array(8)].map((_,i)=>{
-            const key = `appt-skel-${i}`; // stable within render, acceptable for static skeletons
-            return <div key={key} className="h-20 bg-gray-100 animate-pulse rounded" />;
-          })}
-        </div>
+        <ErrorState
+          title="Error Loading Appointments"
+          message={error?.message || 'Failed to load appointments data'}
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-900 text-white">
-      <div className="p-4 sm:p-6 md:p-8 text-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-100">Appointment Management</h1>
-          <button
-            onClick={() => setShowNewAppointmentModal(true)}
-            className="btn-primary"
-          >
-            + New Appointment
-          </button>
+    <div className="responsive-container text-gray-200">
+      <div className="flex flex-col space-y-4 mb-6 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex items-center responsive-space-x-4">
+          <h1 className="responsive-text-2xl font-semibold text-gray-100">Appointment Management</h1>
+          <SyncStatusIndicator dataType="appointments" showLabel />
         </div>
+      </div>
 
-        {/* Calendar View */}
-        {viewMode === 'calendar' && (
-          <div className="mb-6">
-            <div className="bg-surface-800 border border-gray-700 shadow rounded-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <button className="text-gray-400 hover:text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h2 className="text-lg font-semibold text-white">December 2024</h2>
-                <button className="text-gray-400 hover:text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-              <MonthlyCalendar
-                appointments={filteredAppointments}
-                month={new Date().getMonth()}
-                year={new Date().getFullYear()}
-                onSelectAppointment={(a)=> setRescheduleAppointment(a)}
-              />
-            </div>
-          </div>
-        )}
+      {/* Enhanced Filters */}
+      <FilterBar
+        search={{
+          placeholder: 'Search appointments by patient name...',
+          value: searchTerm,
+          onChange: setSearchTerm,
+          showSearchIcon: true
+        }}
+        selects={[
+          {
+            id: 'status',
+            label: 'Status',
+            value: filters.status || 'all',
+            onChange: (value) => setFilter('status', value),
+            options: statusOptions,
+            showCounts: true
+          },
+          {
+            id: 'doctor',
+            label: 'Doctor',
+            value: filters.doctorId || 'all',
+            onChange: (value) => setFilter('doctorId', value),
+            options: doctorOptions,
+            showCounts: true
+          }
+        ]}
+        onClear={clearFilters}
+        onClearAll={clearAll}
+        showResultCount={true}
+        resultCount={resultCount}
+        isFiltered={isFiltered}
+        loading={isLoading}
+      />
 
-        {/* Enhanced Filters and Search */}
-        <FilterBar
-          search={{
-            placeholder: 'Search patient or doctor name...',
-            value: searchTerm,
-            onChange: setSearchTerm,
-            showSearchIcon: true
-          }}
-          selects={[
-            {
-              id: 'status',
-              label: 'Status',
-              value: filters.status || 'all',
-              onChange: (value) => setFilter('status', value),
-              options: statusOptions,
-              showCounts: true
-            },
-            {
-              id: 'doctor',
-              label: 'Doctor',
-              value: filters.doctorId || 'all',
-              onChange: (value) => setFilter('doctorId', value),
-              options: doctorOptions,
-              showCounts: true
-            }
-          ]}
-          onClear={clearFilters}
-          onClearAll={clearAll}
-          showResultCount={true}
-          resultCount={resultCount}
-          isFiltered={isFiltered}
-          loading={isLoading}
-        >
-          <div>
-            <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">Date</label>
-            <input
-              id="date"
-              type="date"
-              value={filters.date || ''}
-              onChange={(e) => setFilter('date', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
-            />
-          </div>
-        </FilterBar>
-
-        {/* View Toggle */}
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 ${
-                viewMode === 'list'
-                  ? 'bg-accent-600 text-white hover:bg-accent-500'
-                  : 'bg-surface-700 text-gray-300 hover:bg-surface-600'
-              }`}
-            >
-              List View
-            </button>
-            <button
-              onClick={() => setViewMode('calendar')}
-              className={`px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-accent-500 ${
-                viewMode === 'calendar'
-                  ? 'bg-accent-600 text-white hover:bg-accent-500'
-                  : 'bg-surface-700 text-gray-300 hover:bg-surface-600'
-              }`}
-            >
-              Calendar View
-            </button>
-          </div>
-        </div>
-
-        {/* Appointments List */}
-        {viewMode === 'list' ? (
-          <SearchResults
-            data={filteredAppointments}
-            searchTerm={debouncedSearchTerm}
-            isFiltered={isFiltered}
-            loading={isLoading}
-            emptyStateTitle="No appointments scheduled"
-            emptyStateMessage="No appointments have been scheduled yet. Create a new appointment to get started."
-            noResultsTitle="No appointments found"
-            noResultsMessage="No appointments match your search criteria. Try adjusting your filters or search terms."
-            showResultCount={false}
-            renderItem={(appointment: any, index: number, searchTerm: string) => (
-              <div key={appointment.id} className="bg-surface-800 border border-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <div className="font-medium text-gray-100">
-                        {highlightMatch(appointment.patient?.name || 'N/A', searchTerm)}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        👨‍⚕️ {highlightMatch(appointment.doctor?.name || 'N/A', searchTerm)}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        🕐 {new Date(appointment.appointmentDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
+      {/* Appointments List with Enhanced Search Results */}
+      <SearchResults
+        data={filteredAppointments}
+        searchTerm={debouncedSearchTerm}
+        isFiltered={isFiltered}
+        loading={isLoading}
+        emptyStateTitle="No appointments scheduled"
+        emptyStateMessage="No appointments are currently scheduled. Create a new appointment to get started."
+        noResultsTitle="No appointments found"
+        noResultsMessage="No appointments match your search criteria. Try adjusting your filters or search terms."
+        showResultCount={false}
+        renderItem={(appointment: any, index: number, searchTerm: string) => (
+          <div key={appointment.id} className="responsive-card">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-gray-100">
+                    {highlightMatch(appointment.patient?.name || 'N/A', searchTerm)}
+                  </h3>
+                  <div className="flex items-center space-x-3">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      appointment.status === 'booked' ? 'bg-blue-600/20 text-blue-300' :
+                      appointment.status === 'completed' ? 'bg-green-600/20 text-green-300' :
+                      'bg-red-600/20 text-red-300'
+                    }`}>
+                      {appointment.status === 'booked' ? '📅 Booked' :
+                       appointment.status === 'completed' ? '✅ Completed' :
+                       '❌ Canceled'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4 text-sm text-gray-400">
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>{appointment.doctor?.name || 'N/A'}</span>
                   </div>
                   
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <select
-                        value={appointment.status}
-                        onChange={(e)=> applyAppointmentStatus(appointment.id, e.target.value as Appointment['status'], appointment.status)}
-                        className="px-3 py-1 text-sm border border-gray-600 rounded bg-surface-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
-                      >
-                        <option value="booked">Booked</option>
-                        <option value="completed">Completed</option>
-                        <option value="canceled">Canceled</option>
-                      </select>
-                      
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        appointment.status === 'booked' ? 'bg-blue-600/20 text-blue-300' :
-                        appointment.status === 'completed' ? 'bg-green-600/20 text-green-300' :
-                        'bg-red-600/20 text-red-300'
-                      }`}>
-                        {appointment.status === 'booked' ? 'Booked' :
-                         appointment.status === 'completed' ? 'Completed' :
-                         'Canceled'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setDetailAppointment(appointment)}
-                        className="text-gray-400 hover:text-gray-200 text-sm"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => setRescheduleAppointment(appointment)}
-                        className="text-accent-400 hover:text-accent-300 text-sm"
-                        disabled={appointment.status !== 'booked'}
-                      >
-                        Reschedule
-                      </button>
-                      <button
-                        onClick={() => handleCancelAppointment(appointment.id)}
-                        disabled={appointment.status === 'canceled' || appointment.status === 'completed'}
-                        className={`text-red-400 hover:text-red-300 text-sm ${
-                          (appointment.status === 'canceled' || appointment.status === 'completed')
-                            ? 'opacity-50 cursor-not-allowed'
-                            : ''
-                        }`}
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>{appointment.appointmentDate}</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{appointment.appointmentTime}</span>
                   </div>
                 </div>
               </div>
-            )}
-            className="space-y-4 mb-6"
-          />
-        ) : (
-          <div className="bg-surface-900 border border-gray-700 shadow rounded-lg p-4">
-            <MonthlyCalendar
-              appointments={filteredAppointments}
-              month={new Date().getMonth()}
-              year={new Date().getFullYear()}
-              onSelectAppointment={(a)=> setRescheduleAppointment(a)}
-            />
-          </div>
-        )}
-        {/* Schedule New Appointment Button */}
-        <button
-          onClick={() => setShowNewAppointmentModal(true)}
-          className="w-full py-3 px-4 bg-surface-700 hover:bg-surface-600 text-gray-200 rounded-lg border border-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500"
-        >
-          Schedule New Appointment
-        </button>
-
-        <SearchablePagination
-          pagination={{
-            page,
-            pageSize,
-            total,
-            totalPages: Math.ceil(total / pageSize),
-            pageNumbers: Array.from({ length: Math.min(5, Math.ceil(total / pageSize)) }, (_, i) => i + 1),
-            nextPage: () => { setPage(p => p + 1); refetch(); },
-            prevPage: () => { setPage(p => p - 1); refetch(); },
-            goToPage: (p: number) => { setPage(p); refetch(); },
-            setPageSize: (size: number) => { setPageSize(size); setPage(1); refetch(); },
-            canNextPage: page < Math.ceil(total / pageSize),
-            canPrevPage: page > 1
-          }}
-          totalResults={total}
-          filteredResults={resultCount}
-          isFiltered={isFiltered}
-          searchTerm={debouncedSearchTerm}
-          showResultSummary={true}
-        />
-
-        {/* Available Doctors Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4 text-gray-100">Available Doctors</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {doctors.filter(d => d.status === 'available').map(doctor => (
-              <DoctorCard
-                key={doctor.id}
-                doctor={doctor}
-                onEdit={handleEditDoctor}
-                onDelete={handleDeleteDoctor}
-                onViewSchedule={handleViewDoctorSchedule}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Appointment Detail Modal */}
-        <Modal
-          isOpen={!!detailAppointment}
-          onClose={() => setDetailAppointment(null)}
-          title={detailAppointment ? `Appointment #${detailAppointment.id}` : 'Appointment'}
-          size="md"
-        >
-          {detailAppointment && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-gray-500">Patient</div>
-                  <div className="font-medium">{detailAppointment.patient?.name}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Doctor</div>
-                  <div className="font-medium">{detailAppointment.doctor?.name}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Date</div>
-                  <div className="font-medium">{new Date(detailAppointment.appointmentDatetime).toLocaleDateString()}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Time</div>
-                  <div className="font-medium">{new Date(detailAppointment.appointmentDatetime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Status</div>
-                  <div className="font-medium capitalize">{detailAppointment.status}</div>
-                </div>
-                {detailAppointment.notes && (
-                  <div className="col-span-2">
-                    <div className="text-gray-500">Notes</div>
-                    <div className="font-medium whitespace-pre-wrap">{detailAppointment.notes}</div>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-3 justify-end pt-2">
-                {detailAppointment.status === 'booked' && (
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm('Cancel this appointment?')) return;
-                      await handleCancelAppointment(detailAppointment.id);
-                      setDetailAppointment(null);
-                    }}
-                    className="px-3 py-2 text-sm text-red-600 hover:text-red-800"
-                  >
-                    Cancel
-                  </button>
-                )}
-                <button
-                  onClick={() => setRescheduleAppointment(detailAppointment)}
-                  disabled={detailAppointment.status !== 'booked'}
-                  className="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              
+              <div className="flex items-center space-x-2">
+                <select
+                  value={appointment.status}
+                  onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                  className="px-3 py-1 text-sm border border-gray-600 rounded bg-surface-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent-500"
                 >
-                  Reschedule
-                </button>
+                  <option value="booked">Booked</option>
+                  <option value="completed">Completed</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+                
                 <button
-                  onClick={() => setDetailAppointment(null)}
-                  className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 text-sm"
+                  onClick={() => handleCancelAppointment(appointment.id)}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-600/10 rounded"
+                  disabled={appointment.status === 'canceled'}
                 >
-                  Close
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>
-          )}
-        </Modal>
+          </div>
+        )}
+        className="space-y-4 mb-6"
+      />
 
-        {/* Reschedule Modal */}
-        <Modal
-          isOpen={!!rescheduleAppointment}
-          onClose={() => setRescheduleAppointment(null)}
-          title={rescheduleAppointment ? `Reschedule #${rescheduleAppointment.id}` : 'Reschedule'}
-          size="md"
-        >
-          {rescheduleAppointment && (
-            <AppointmentRescheduleForm
-              appointment={rescheduleAppointment}
-              onSuccess={() => { setRescheduleAppointment(null); refetch(); }}
-              onCancel={() => setRescheduleAppointment(null)}
+      {/* Create New Appointment Button */}
+      <LoadingButton
+        isLoading={createAppointmentMutation.isLoading || globalIsLoading('appointments')}
+        onClick={() => setShowAddModal(true)}
+        className="w-full touch-button bg-surface-700 hover:bg-surface-600 text-gray-200 rounded-lg border border-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 desktop:hover:shadow-md desktop:hover:scale-105"
+        loadingText="Processing..."
+      >
+        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        Schedule New Appointment
+      </LoadingButton>
+
+      <SearchablePagination
+        pagination={{
+          page,
+          pageSize,
+          total: totalAppointments,
+          totalPages: Math.ceil(totalAppointments / pageSize),
+          pageNumbers: Array.from({ length: Math.min(5, Math.ceil(totalAppointments / pageSize)) }, (_, i) => i + 1),
+          nextPage: () => { setPage(p => p + 1); refetch(); },
+          prevPage: () => { setPage(p => p - 1); refetch(); },
+          goToPage: (p: number) => { setPage(p); refetch(); },
+          setPageSize: (size: number) => { setPageSize(size); setPage(1); refetch(); },
+          canNextPage: page < Math.ceil(totalAppointments / pageSize),
+          canPrevPage: page > 1
+        }}
+        totalResults={totalAppointments}
+        filteredResults={resultCount}
+        isFiltered={isFiltered}
+        searchTerm={debouncedSearchTerm}
+        showResultSummary={true}
+      />
+
+      {/* Create Appointment Modal */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Schedule New Appointment"
+      >
+        <div className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium text-gray-700">Select Existing Patient</legend>
+            <select
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- Select Patient --</option>
+              {availablePatients.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </fieldset>
+          <div>
+            <label htmlFor="patientName" className="block text-sm font-medium text-gray-700 mb-1">
+              Or Create New Patient
+            </label>
+            <input
+              type="text"
+              id="patientName"
+              value={newPatientName}
+              onChange={(e) => setNewPatientName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter patient name"
             />
-          )}
-        </Modal>
-
-        {/* New Appointment Modal */}
-        <Modal
-          isOpen={showNewAppointmentModal}
-          onClose={() => setShowNewAppointmentModal(false)}
-          title="Schedule New Appointment"
-          size="lg"
-        >
-          <AppointmentForm
-            doctors={doctors}
-            patients={patients}
-            onSubmit={handleCreateAppointment}
-            onCancel={() => setShowNewAppointmentModal(false)}
-          />
-        </Modal>
-
-        {/* Doctor Schedule Modal */}
-        <Modal
-          isOpen={showDoctorScheduleModal && !!selectedDoctor}
-          onClose={() => {
-            setShowDoctorScheduleModal(false);
-            setSelectedDoctor(null);
-          }}
-          title={`${selectedDoctor?.name} - Schedule`}
-          size="md"
-          confirmOnClose={doctorScheduleDirty}
-          onBeforeClose={() => { if (doctorScheduleDirty) { return window.confirm('Discard unsaved schedule changes?') || false; } }}
-        >
-          {selectedDoctor && (
-            <DoctorScheduleForm
-              doctor={selectedDoctor as any}
-              onDirtyChange={setDoctorScheduleDirty}
-              onCancel={() => { setShowDoctorScheduleModal(false); setSelectedDoctor(null); }}
-              onSave={async (schedule) => {
-                const doctorId = selectedDoctor.id;
-                // optimistic update
-                setDoctors(prev => prev.map(d => d.id === doctorId ? { ...d, availabilitySchedule: schedule } : d));
-                setDoctorScheduleDirty(false);
-                setShowDoctorScheduleModal(false);
-                try {
-                  await updateDoctorSchedule(doctorId, schedule);
-                  queryClient.invalidateQueries('doctors');
-                } catch (e) {
-                  console.error('Failed to save schedule', e);
-                  // rollback fetch
-                  const fresh = await fetchDoctorById(doctorId);
-                  if (fresh) {
-                    setDoctors(prev => prev.map(d => d.id === doctorId ? fresh : d));
-                  }
-                }
-              }}
+          </div>
+          <div>
+            <label htmlFor="doctorSelect" className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+            <select
+              id="doctorSelect"
+              value={selectedDoctorId}
+              onChange={(e) => setSelectedDoctorId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- Select Doctor --</option>
+              {availableDoctors.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="appointmentDate" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              id="appointmentDate"
+              value={appointmentDate}
+              onChange={(e) => setAppointmentDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
-          )}
-        </Modal>
-      </div>
+          </div>
+          <div>
+            <label htmlFor="appointmentTime" className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <input
+              type="time"
+              id="appointmentTime"
+              value={appointmentTime}
+              onChange={(e) => setAppointmentTime(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-200 bg-surface-700 border border-gray-600 rounded-md hover:bg-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500"
+            >
+              Cancel
+            </button>
+            <LoadingButton
+              isLoading={createAppointmentMutation.isLoading}
+              onClick={handleCreateAppointment}
+              disabled={!(newPatientName.trim() || selectedPatientId) || !selectedDoctorId || !appointmentDate || !appointmentTime}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                !(newPatientName.trim() || selectedPatientId) || !selectedDoctorId || !appointmentDate || !appointmentTime
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              loadingText="Creating..."
+            >
+              Schedule Appointment
+            </LoadingButton>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

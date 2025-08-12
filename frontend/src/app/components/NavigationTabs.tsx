@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 const tabs = [
   { 
@@ -93,8 +93,8 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`mb-4 md:mb-6 ${className}`}>
-      <nav className="flex space-x-1 overflow-x-auto scrollbar-hide px-1" role="tablist">
+    <div className={`mb-6 ${className}`}>
+      <nav className="flex space-x-2" role="tablist">
         {tabs.map(tab => {
           const isActive = currentTab === tab.href;
           
@@ -102,18 +102,17 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ className = '' }) => {
             <Link
               key={tab.name}
               href={tab.href}
-              className={`flex items-center justify-center space-x-1 md:space-x-2 px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 focus:ring-offset-surface-900 min-w-[44px] min-h-[44px] ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                 isActive
-                  ? 'bg-accent-600 text-white shadow-md'
-                  : 'text-gray-400 hover:text-gray-300 hover:bg-surface-800 desktop:hover:shadow-sm desktop:hover:scale-105'
+                  ? 'bg-gray-700 text-white'
+                  : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
               }`}
               aria-current={isActive ? 'page' : undefined}
               role="tab"
               aria-selected={isActive}
             >
-              <span className="flex-shrink-0">{tab.icon}</span>
-              <span className="hidden md:inline truncate">{tab.name}</span>
-              <span className="md:hidden text-xs truncate">{tab.shortName}</span>
+              <span className="hidden sm:inline">{tab.name}</span>
+              <span className="sm:hidden">{tab.shortName}</span>
             </Link>
           );
         })}

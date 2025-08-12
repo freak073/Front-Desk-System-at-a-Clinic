@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-surface-900 text-gray-100 antialiased;
+    @apply bg-black text-gray-100 antialiased;
   }
 }
 

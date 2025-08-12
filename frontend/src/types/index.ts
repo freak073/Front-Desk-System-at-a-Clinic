@@ -96,7 +96,7 @@ export interface CreateDoctorDto {
   status?: 'available' | 'busy' | 'off_duty';
 }
 
-export interface UpdateDoctorDto extends Partial<CreateDoctorDto> {}
+export interface UpdateDoctorDto extends Partial<CreateDoctorDto> { }
 
 export interface CreatePatientDto {
   name: string;
@@ -104,7 +104,7 @@ export interface CreatePatientDto {
   medicalRecordNumber?: string;
 }
 
-export interface UpdatePatientDto extends Partial<CreatePatientDto> {}
+export interface UpdatePatientDto extends Partial<CreatePatientDto> { }
 
 export interface CreateQueueEntryDto {
   patientId: number;

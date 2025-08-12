@@ -13,5 +13,6 @@
   ],
   "jest.jestCommandLine": "npm test",
   "jest.rootPath": "C:\\Users\\varun\\Desktop\\Allo Health\\Front Desk System at a Clinic\\frontend",
-  "jest.enable": false
+  "jest.enable": false,
+  "snippets.viewer.sortSnippetsByName": true
 }
