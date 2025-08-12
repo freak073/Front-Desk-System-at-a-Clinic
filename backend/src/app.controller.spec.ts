@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AppController } from "./app.controller";
 
-describe('AppController', () => {
+describe("AppController", () => {
   let appController: AppController;
 
   beforeEach(async () => {
@@ -12,11 +12,11 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('getHealth', () => {
-    it('should return health status', () => {
+  describe("getHealth", () => {
+    it("should return health status", () => {
       const result = appController.getHealth();
       expect(result.success).toBe(true);
-      expect(result.message).toBe('Front Desk System API is running');
+      expect(result.message).toBe("Front Desk System API is running");
       expect(result.timestamp).toBeDefined();
     });
   });

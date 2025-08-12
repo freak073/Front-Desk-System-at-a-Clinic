@@ -10,20 +10,27 @@ import {
   HttpStatus,
   Logger,
   Injectable,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
-import { ErrorMonitoringService, ErrorSeverity } from '../services/error-monitoring.service';
+} from "@nestjs/common";
+import { Request, Response } from "express";
+import {
+  ErrorMonitoringService,
+  ErrorSeverity,
+} from "../services/error-monitoring.service";
+import { QueryFailedError } from "typeorm";
 
 /**
  * Error response interface
  */
 interface ErrorResponse {
+  success: false;
   statusCode: number;
   message: string;
-  error: string;
+  error: string; // symbolic / status name
   path: string;
   timestamp: string;
   correlationId?: string;
+  errors?: string[] | Record<string, string[]>; // field validation errors
+  stack?: string; // only in non-production
 }
 
 /**
@@ -33,49 +40,50 @@ interface ErrorResponse {
 @Catch()
 @Injectable()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger('GlobalExceptionFilter');
+  private readonly logger = new Logger("GlobalExceptionFilter");
 
   constructor(private errorMonitoringService: ErrorMonitoringService) {}
 
-  catch(exception: any, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
     // Generate a correlation ID for tracking this error
     const correlationId = this.generateCorrelationId();
-
-    // Determine HTTP status code
     const status = this.getHttpStatus(exception);
-
-    // Get error message
-    const message = this.getErrorMessage(exception);
+    const { message, validationErrors } =
+      this.getErrorMessageAndDetails(exception);
 
     // Determine error severity based on status code
     const severity = this.getErrorSeverity(status);
 
     // Capture error for monitoring
-    this.captureError(exception, severity, request, correlationId);
+    this.captureError(exception as Error, severity, request, correlationId);
 
     // Log the error
     this.logError(exception, request, correlationId, status);
 
     // Send error response
     const errorResponse: ErrorResponse = {
+      success: false,
       statusCode: status,
       message,
       error: this.getErrorName(exception),
       path: request.url,
       timestamp: new Date().toISOString(),
       correlationId,
+      errors: validationErrors,
     };
 
     // In production, remove stack traces and sensitive information
-    if (process.env.NODE_ENV === 'production') {
-      delete (errorResponse as any).stack;
+    if (process.env.NODE_ENV === "production") {
+      // nothing extra (stack omitted)
     } else {
       // Add stack trace for development
-      (errorResponse as any).stack = exception.stack;
+      if (exception instanceof Error) {
+        errorResponse.stack = exception.stack;
+      }
     }
 
     response.status(status).json(errorResponse);
@@ -86,10 +94,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param exception - Exception object
    * @returns HTTP status code
    */
-  private getHttpStatus(exception: any): number {
-    return exception instanceof HttpException
-      ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+  private getHttpStatus(exception: unknown): number {
+    if (exception instanceof HttpException) return exception.getStatus();
+    if (exception instanceof QueryFailedError) return HttpStatus.BAD_REQUEST;
+    return HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   /**
@@ -97,16 +105,48 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param exception - Exception object
    * @returns Error message
    */
-  private getErrorMessage(exception: any): string {
+  private getErrorMessageAndDetails(exception: unknown): {
+    message: string;
+    validationErrors?: string[] | Record<string, string[]>;
+  } {
+    // HttpExceptions may carry validation arrays
     if (exception instanceof HttpException) {
-      const response = exception.getResponse();
-      return typeof response === 'object' && 'message' in response
-        ? Array.isArray(response.message)
-          ? response.message.join(', ')
-          : String(response.message)
-        : exception.message;
+      const resp = exception.getResponse();
+      if (typeof resp === "string") {
+        return { message: resp };
+      }
+      if (typeof resp === "object" && resp) {
+        const obj = resp as Record<string, unknown>;
+        const rawMessage = obj.message;
+        const message = Array.isArray(rawMessage)
+          ? rawMessage.join(", ")
+          : typeof rawMessage === "string"
+            ? rawMessage
+            : exception.message;
+        // Nest validation pipe yields: { statusCode, message: string[], error: 'Bad Request' }
+        if (Array.isArray(rawMessage)) {
+          const coerced = rawMessage.map((m) => String(m));
+          return {
+            message,
+            validationErrors: this.formatValidationArray(coerced),
+          };
+        }
+        return { message };
+      }
+      return { message: exception.message };
     }
-    return exception.message || 'Internal server error';
+
+    if (exception instanceof QueryFailedError) {
+      return {
+        message: this.formatDatabaseError(exception as QueryFailedError),
+      };
+    }
+
+    if (exception instanceof Error) {
+      return { message: exception.message || "Internal server error" };
+    }
+
+    return { message: "Internal server error" };
   }
 
   /**
@@ -114,11 +154,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param exception - Exception object
    * @returns Error name
    */
-  private getErrorName(exception: any): string {
+  private getErrorName(exception: unknown): string {
     if (exception instanceof HttpException) {
-      return HttpStatus[exception.getStatus()] || 'HttpException';
+      return HttpStatus[exception.getStatus()] || "HttpException";
     }
-    return exception.name || 'InternalServerError';
+    if (exception instanceof QueryFailedError) return "QueryFailedError";
+    if (exception instanceof Error) return exception.name || "Error";
+    return "UnknownError";
   }
 
   /**
@@ -143,7 +185,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param correlationId - Correlation ID
    */
   private captureError(
-    exception: any,
+    exception: Error,
     severity: ErrorSeverity,
     request: Request,
     correlationId: string,
@@ -152,13 +194,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const context = {
       path: request.url,
       method: request.method,
-      query: request.query,
+      query: request.query as Record<string, unknown>,
       // Avoid logging sensitive information
       body: this.sanitizeRequestBody(request.body),
-      userId: (request as any).user?.id,
+      userId:
+        (request as unknown as { user?: { id?: number } }).user?.id !==
+        undefined
+          ? `${(request as unknown as { user?: { id?: number } }).user?.id}`
+          : undefined,
       metadata: {
         correlationId,
-        userAgent: request.headers['user-agent'],
+        userAgent: request.headers["user-agent"],
         ip: request.ip,
       },
     };
@@ -175,22 +221,37 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param status - HTTP status code
    */
   private logError(
-    exception: any,
+    exception: unknown,
     request: Request,
     correlationId: string,
     status: number,
   ): void {
     const message = `${request.method} ${request.url} - ${status} - ${correlationId}`;
-
+    const errMsg = this.normalizeErrorValue(exception);
     if (status >= 500) {
       this.logger.error(
-        `${message} - ${exception.message}`,
-        exception.stack,
+        `${message} - ${errMsg}`,
+        exception instanceof Error ? exception.stack : undefined,
       );
     } else if (status >= 400) {
-      this.logger.warn(`${message} - ${exception.message}`);
+      this.logger.warn(`${message} - ${errMsg}`);
     } else {
-      this.logger.log(`${message} - ${exception.message}`);
+      this.logger.log(`${message} - ${errMsg}`);
+    }
+  }
+
+  /** Normalize unknown exception value into safe log string */
+  private normalizeErrorValue(exception: unknown): string {
+    if (exception instanceof Error) return exception.message;
+    if (exception === null || exception === undefined) return "Unknown";
+    const t = typeof exception;
+    if (t === "string" || t === "number" || t === "boolean") {
+      return String(exception);
+    }
+    try {
+      return JSON.stringify(exception);
+    } catch {
+      return "[Unstringifiable Object]";
     }
   }
 
@@ -207,36 +268,61 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * @param body - Request body
    * @returns Sanitized body
    */
-  private sanitizeRequestBody(body: any): any {
-    if (!body) {
+  private sanitizeRequestBody(body: unknown): Record<string, unknown> {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      body === null
+    ) {
       return {};
     }
-
-    // Create a copy of the body
-    const sanitized = { ...body };
-
-    // List of sensitive fields to redact
+    const original = body as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = { ...original };
     const sensitiveFields = [
-      'password',
-      'passwordConfirmation',
-      'currentPassword',
-      'newPassword',
-      'token',
-      'accessToken',
-      'refreshToken',
-      'credit_card',
-      'creditCard',
-      'ssn',
-      'socialSecurityNumber',
+      "password",
+      "passwordConfirmation",
+      "currentPassword",
+      "newPassword",
+      "token",
+      "accessToken",
+      "refreshToken",
+      "credit_card",
+      "creditCard",
+      "ssn",
+      "socialSecurityNumber",
     ];
-
-    // Redact sensitive fields
-    sensitiveFields.forEach(field => {
-      if (field in sanitized) {
-        sanitized[field] = '[REDACTED]';
-      }
-    });
-
+    for (const field of sensitiveFields) {
+      if (field in sanitized) sanitized[field] = "[REDACTED]";
+    }
     return sanitized;
+  }
+
+  private formatValidationArray(
+    messages: string[],
+  ): Record<string, string[]> | string[] {
+    // Basic heuristic: messages like "field must not be empty"
+    const fieldRegex = /^([^\s]+)\s.+/;
+    const grouped: Record<string, string[]> = {};
+    let structured = false;
+    for (const msg of messages) {
+      const match = fieldRegex.exec(msg);
+      if (!match) continue;
+      structured = true;
+      const field = match[1];
+      if (!grouped[field]) grouped[field] = [];
+      grouped[field].push(msg);
+    }
+    return structured ? grouped : messages;
+  }
+
+  private formatDatabaseError(err: QueryFailedError): string {
+    const message = err.message || "Database error";
+    if (message.includes("Duplicate entry")) return "Duplicate record";
+    if (message.includes("foreign key constraint"))
+      return "Related data constraint violation";
+    return process.env.NODE_ENV === "development"
+      ? message
+      : "A database error occurred";
   }
 }

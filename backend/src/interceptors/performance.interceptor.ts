@@ -2,16 +2,22 @@
  * Performance interceptors for optimizing API responses
  */
 
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  Logger,
+} from "@nestjs/common";
+import { Observable } from "rxjs";
+import { tap, map } from "rxjs/operators";
 
 /**
  * Interceptor for measuring and logging API response times
  */
 @Injectable()
 export class ResponseTimeInterceptor implements NestInterceptor {
-  private readonly logger = new Logger('ResponseTimeInterceptor');
+  private readonly logger = new Logger("ResponseTimeInterceptor");
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -25,15 +31,17 @@ export class ResponseTimeInterceptor implements NestInterceptor {
 
         // Add response time header
         const response = context.switchToHttp().getResponse();
-        response.header('X-Response-Time', `${responseTime}ms`);
+        response.header("X-Response-Time", `${responseTime}ms`);
 
         // Log response time for slow requests
         if (responseTime > 500) {
-          this.logger.warn(`Slow response: ${method} ${url} - ${responseTime}ms`);
-        } else if (process.env.NODE_ENV === 'development') {
+          this.logger.warn(
+            `Slow response: ${method} ${url} - ${responseTime}ms`,
+          );
+        } else if (process.env.NODE_ENV === "development") {
           this.logger.debug(`${method} ${url} - ${responseTime}ms`);
         }
-      })
+      }),
     );
   }
 }
@@ -43,11 +51,11 @@ export class ResponseTimeInterceptor implements NestInterceptor {
  */
 @Injectable()
 export class ResponseOptimizationInterceptor implements NestInterceptor {
-  private readonly logger = new Logger('ResponseOptimizationInterceptor');
+  private readonly logger = new Logger("ResponseOptimizationInterceptor");
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      map(data => {
+      map((data) => {
         const request = context.switchToHttp().getRequest();
         const response = context.switchToHttp().getResponse();
 
@@ -58,7 +66,7 @@ export class ResponseOptimizationInterceptor implements NestInterceptor {
         }
 
         return data;
-      })
+      }),
     );
   }
 
@@ -73,7 +81,7 @@ export class ResponseOptimizationInterceptor implements NestInterceptor {
       return [];
     }
 
-    return fieldsParam.split(',').map(field => field.trim());
+    return fieldsParam.split(",").map((field) => field.trim());
   }
 
   /**
@@ -85,15 +93,15 @@ export class ResponseOptimizationInterceptor implements NestInterceptor {
   private filterFields(data: any, fields: string[]): any {
     // Handle arrays
     if (Array.isArray(data)) {
-      return data.map(item => this.filterFields(item, fields));
+      return data.map((item) => this.filterFields(item, fields));
     }
 
     // Handle objects
-    if (data && typeof data === 'object') {
+    if (data && typeof data === "object") {
       const result: any = {};
 
       // Include only requested fields
-      fields.forEach(field => {
+      fields.forEach((field) => {
         if (field in data) {
           result[field] = data[field];
         }
@@ -114,11 +122,16 @@ export class ResponseOptimizationInterceptor implements NestInterceptor {
 export class PaginationInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      map(data => {
+      map((data) => {
         const request = context.switchToHttp().getRequest();
 
         // Check if response is paginated
-        if (data && typeof data === 'object' && 'items' in data && 'total' in data) {
+        if (
+          data &&
+          typeof data === "object" &&
+          "items" in data &&
+          "total" in data
+        ) {
           // Extract pagination parameters from request
           const page = parseInt(request.query.page, 10) || 1;
           const limit = parseInt(request.query.limit, 10) || 10;
@@ -132,13 +145,13 @@ export class PaginationInterceptor implements NestInterceptor {
               limit,
               pages: Math.ceil(data.total / limit),
               hasNextPage: page * limit < data.total,
-              hasPreviousPage: page > 1
-            }
+              hasPreviousPage: page > 1,
+            },
           };
         }
 
         return data;
-      })
+      }),
     );
   }
 }
@@ -150,15 +163,15 @@ export class PaginationInterceptor implements NestInterceptor {
 export class DataTransformInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     return next.handle().pipe(
-      map(data => {
+      map((data) => {
         // Skip transformation for non-object responses
-        if (!data || typeof data !== 'object') {
+        if (!data || typeof data !== "object") {
           return data;
         }
 
         // Transform response data
         return this.transformData(data);
-      })
+      }),
     );
   }
 
@@ -170,11 +183,11 @@ export class DataTransformInterceptor implements NestInterceptor {
   private transformData(data: any): any {
     // Handle arrays
     if (Array.isArray(data)) {
-      return data.map(item => this.transformData(item));
+      return data.map((item) => this.transformData(item));
     }
 
     // Handle objects
-    if (data && typeof data === 'object') {
+    if (data && typeof data === "object") {
       const result: any = {};
 
       // Transform each property
@@ -186,7 +199,7 @@ export class DataTransformInterceptor implements NestInterceptor {
           }
 
           // Transform nested objects and arrays
-          if (typeof data[key] === 'object') {
+          if (typeof data[key] === "object") {
             result[key] = this.transformData(data[key]);
           } else {
             result[key] = data[key];
@@ -203,7 +216,7 @@ export class DataTransformInterceptor implements NestInterceptor {
 
 /**
  * Example usage in app.module.ts:
- * 
+ *
  * @Module({
  *   providers: [
  *     {

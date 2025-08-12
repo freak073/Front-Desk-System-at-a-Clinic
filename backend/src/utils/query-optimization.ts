@@ -1,7 +1,12 @@
 /**
  * Utility functions for optimizing database queries
  */
-import { Repository, SelectQueryBuilder, FindManyOptions, FindOptionsWhere } from 'typeorm';
+import {
+  Repository,
+  SelectQueryBuilder,
+  FindManyOptions,
+  FindOptionsWhere,
+} from "typeorm";
 
 /**
  * Interface for pagination parameters
@@ -10,7 +15,7 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'ASC' | 'DESC';
+  sortOrder?: "ASC" | "DESC";
 }
 
 /**
@@ -36,7 +41,7 @@ export async function paginateAndSort<T>(
     where?: FindOptionsWhere<T> | FindOptionsWhere<T>[];
     relations?: string[];
     select?: (keyof T)[];
-  }
+  },
 ): Promise<PaginatedResponse<T>> {
   const { paginationParams, where, relations, select } = options;
 
@@ -57,7 +62,7 @@ export async function paginateAndSort<T>(
 
   if (paginationParams.sortBy) {
     findOptions.order = {
-      [paginationParams.sortBy]: paginationParams.sortOrder || 'ASC',
+      [paginationParams.sortBy]: paginationParams.sortOrder || "ASC",
     } as any;
   }
 
@@ -80,14 +85,17 @@ export async function paginateAndSort<T>(
  */
 export async function paginateQueryBuilder<T>(
   queryBuilder: SelectQueryBuilder<T>,
-  paginationParams: PaginationParams
+  paginationParams: PaginationParams,
 ): Promise<PaginatedResponse<T>> {
   const page = paginationParams.page || 1;
   const limit = paginationParams.limit || 10;
   const skip = (page - 1) * limit;
 
   if (paginationParams.sortBy) {
-    queryBuilder.orderBy(paginationParams.sortBy, paginationParams.sortOrder || 'ASC');
+    queryBuilder.orderBy(
+      paginationParams.sortBy,
+      paginationParams.sortOrder || "ASC",
+    );
   }
 
   const total = await queryBuilder.clone().getCount();
@@ -113,7 +121,7 @@ export async function paginateQueryBuilder<T>(
 export async function selectOptimizedFields<T>(
   repository: Repository<T>,
   fields: (keyof T)[],
-  where?: FindOptionsWhere<T> | FindOptionsWhere<T>[]
+  where?: FindOptionsWhere<T> | FindOptionsWhere<T>[],
 ): Promise<Partial<T>[]> {
   return repository.find({
     select: fields as any,
@@ -127,12 +135,15 @@ export async function selectOptimizedFields<T>(
 export function createOptimizedQueryBuilder<T>(
   repository: Repository<T>,
   alias: string,
-  relations: Array<{ property: string; alias: string }> = []
+  relations: Array<{ property: string; alias: string }> = [],
 ): SelectQueryBuilder<T> {
   const queryBuilder = repository.createQueryBuilder(alias);
 
-  relations.forEach(relation => {
-    queryBuilder.leftJoinAndSelect(`${alias}.${relation.property}`, relation.alias);
+  relations.forEach((relation) => {
+    queryBuilder.leftJoinAndSelect(
+      `${alias}.${relation.property}`,
+      relation.alias,
+    );
   });
 
   return queryBuilder;

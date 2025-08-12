@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional } from "class-validator";
 
 // Frontend sends { token }; guard already validated user via current token.
 // Accept token for forward compatibility and optional fallbackPassword (not used now).

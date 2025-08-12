@@ -1,5 +1,5 @@
-import { ApiTags } from '@nestjs/swagger';
-import {   
+import { ApiTags } from "@nestjs/swagger";
+import {
   Controller,
   Post,
   Body,
@@ -11,27 +11,22 @@ import {
   UseGuards,
   HttpCode,
   BadRequestException,
-} from '@nestjs/common';
-import { AppointmentsService } from './appointments.service';
-import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { AppointmentQueryDto } from './dto/appointment-query.dto';
-import { UpdateAppointmentDto } from './dto/update-appointment.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AvailableSlotsQueryDto } from './dto/available-slots-query.dto';
+} from "@nestjs/common";
+import { AppointmentsService } from "./appointments.service";
+import { CreateAppointmentDto } from "./dto/create-appointment.dto";
+import { AppointmentQueryDto } from "./dto/appointment-query.dto";
+import { UpdateAppointmentDto } from "./dto/update-appointment.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { AvailableSlotsQueryDto } from "./dto/available-slots-query.dto";
+import {
+  ApiResponseDto,
+  PaginatedResponseDto,
+} from "../common/dto/api-response.dto";
 
+// (Former helper getValidAppointmentDateTime removed as unused)
 
-function getValidAppointmentDateTime() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  while (date.getDay() === 0 || date.getDay() === 6) {
-    date.setDate(date.getDate() + 1);
-  }
-  date.setHours(10, 0, 0, 0);
-  return date.toISOString();
-}
-
-@ApiTags('Appointments')
-@Controller('appointments')
+@ApiTags("Appointments")
+@Controller("appointments")
 @UseGuards(JwtAuthGuard)
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
@@ -39,97 +34,105 @@ export class AppointmentsController {
   @Post()
   @HttpCode(201)
   async create(@Body() createAppointmentDto: CreateAppointmentDto) {
-    // Strictly parse and validate IDs
-    let { patientId, doctorId, appointmentDatetime, notes } = createAppointmentDto;
-    patientId = Number(patientId);
-    doctorId = Number(doctorId);
-    if (!patientId || isNaN(patientId)) {
-      throw new BadRequestException('Patient ID must be a valid number');
+    // Strictly parse and validate IDs (avoid reassigning destructured vars for lint clarity)
+    const { appointmentDatetime, notes } = createAppointmentDto;
+    const patientId = Number(createAppointmentDto.patientId);
+    const doctorId = Number(createAppointmentDto.doctorId);
+    if (!patientId || Number.isNaN(patientId)) {
+      throw new BadRequestException("Patient ID must be a valid number");
     }
-    if (!doctorId || isNaN(doctorId)) {
-      throw new BadRequestException('Doctor ID must be a valid number');
+    if (!doctorId || Number.isNaN(doctorId)) {
+      throw new BadRequestException("Doctor ID must be a valid number");
     }
     if (!appointmentDatetime) {
-      throw new BadRequestException('Appointment date/time is required');
+      throw new BadRequestException("Appointment date/time is required");
     }
-    const appointment = await this.appointmentsService.create({ patientId, doctorId, appointmentDatetime, notes });
-    return { success: true, data: appointment };
+    const appointment = await this.appointmentsService.create({
+      patientId,
+      doctorId,
+      appointmentDatetime,
+      notes,
+    });
+    return ApiResponseDto.success(appointment);
   }
 
   @Get()
   async findAll(@Query() query: AppointmentQueryDto) {
     const result = await this.appointmentsService.findAll(query);
-    return {
-      success: true,
-      data: result.appointments,
-      meta: {
-        total: result.total,
-        totalPages: result.totalPages,
-        page: Number(query.page) || 1,
-        limit: Number(query.limit) || 10,
-      },
-    };
+    return new PaginatedResponseDto(result.appointments, {
+      page: Number(query.page) || 1,
+      limit: Number(query.limit) || 10,
+      total: result.total,
+      totalPages: result.totalPages,
+    });
   }
 
-
-  @Get('available-slots')
+  @Get("available-slots")
   async getAvailableSlots(@Query() query: AvailableSlotsQueryDto) {
     // Validate doctorId and date
     const doctorId = Number(query.doctorId);
     if (!doctorId || isNaN(doctorId)) {
-      throw new BadRequestException('Doctor ID must be a valid number');
+      throw new BadRequestException("Doctor ID must be a valid number");
     }
     if (!query.date) {
-      throw new BadRequestException('Date is required');
+      throw new BadRequestException("Date is required");
     }
-    const slots = await this.appointmentsService.getAvailableSlots(doctorId, query.date);
-    return { success: true, data: slots };
+    const slots = await this.appointmentsService.getAvailableSlots(
+      doctorId,
+      query.date,
+    );
+    return ApiResponseDto.success(slots);
   }
 
-  @Get(':id(\\d+)')
-  async findOne(@Param('id') id: string) {
+  @Get(":id(\\d+)")
+  async findOne(@Param("id") id: string) {
     const numId = Number(id);
     if (!numId || isNaN(numId)) {
-      throw new BadRequestException('Appointment ID must be a valid number');
+      throw new BadRequestException("Appointment ID must be a valid number");
     }
     const appointment = await this.appointmentsService.findOne(numId);
-    return { success: true, data: appointment };
+    return ApiResponseDto.success(appointment);
   }
 
-  @Get('statistics/status')
+  @Get("statistics/status")
   async getStatusStatistics() {
     const stats = await this.appointmentsService.getStatusStatistics();
-    return { success: true, data: stats };
+    return ApiResponseDto.success(stats);
   }
 
-  @Get('today')
+  @Get("today")
   async getTodaysAppointments() {
     const appointments = await this.appointmentsService.getTodaysAppointments();
-    return { success: true, data: appointments };
+    return ApiResponseDto.success(appointments);
   }
 
-  @Get('upcoming')
-  async getUpcomingAppointments(@Query('limit') limit: number) {
-    const appointments = await this.appointmentsService.getUpcomingAppointments(Number(limit) || 10);
-    return { success: true, data: appointments };
+  @Get("upcoming")
+  async getUpcomingAppointments(@Query("limit") limit: number) {
+    const appointments = await this.appointmentsService.getUpcomingAppointments(
+      Number(limit) || 10,
+    );
+    return ApiResponseDto.success(appointments);
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateDto: UpdateAppointmentDto) {
+  @Patch(":id")
+  async update(
+    @Param("id") id: string,
+    @Body() updateDto: UpdateAppointmentDto,
+  ) {
     const numId = Number(id);
     if (!numId || isNaN(numId)) {
-      throw new BadRequestException('Appointment ID must be a valid number');
+      throw new BadRequestException("Appointment ID must be a valid number");
     }
     const updated = await this.appointmentsService.update(numId, updateDto);
-    return { success: true, data: updated };
+    return ApiResponseDto.success(updated);
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @HttpCode(204)
-  async remove(@Param('id') id: string) {
+  async remove(@Param("id") id: string) {
     const numId = Number(id);
     if (!numId || isNaN(numId)) {
-      throw new BadRequestException('Appointment ID must be a valid number');
+      throw new BadRequestException("Appointment ID must be a valid number");
     }
     await this.appointmentsService.remove(numId);
   }

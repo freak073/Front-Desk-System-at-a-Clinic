@@ -1,5 +1,5 @@
-import { IsDateString, IsNotEmpty, IsNumber } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsDateString, IsNotEmpty, IsNumber } from "class-validator";
+import { Transform } from "class-transformer";
 
 export class AvailableSlotsQueryDto {
   @IsNumber()

@@ -3,7 +3,8 @@
 export interface User {
   id: number;
   username: string;
-  role: 'front_desk';
+  role: 'admin' | 'staff';
+  fullName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -134,6 +135,13 @@ export interface UpdateAppointmentDto {
 export interface LoginDto {
   username: string;
   password: string;
+}
+
+export interface SignupDto {
+  username: string;
+  password: string;
+  role?: 'admin' | 'staff';
+  fullName?: string;
 }
 
 export interface AuthResponse {

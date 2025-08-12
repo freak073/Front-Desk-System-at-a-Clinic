@@ -1,5 +1,5 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsOptional, IsString, IsEnum, IsNumber, Min } from "class-validator";
+import { Transform } from "class-transformer";
 
 export class QueueQueryDto {
   @IsOptional()
@@ -7,12 +7,12 @@ export class QueueQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsEnum(['waiting', 'with_doctor', 'completed'])
-  status?: 'waiting' | 'with_doctor' | 'completed';
+  @IsEnum(["waiting", "with_doctor", "completed"])
+  status?: "waiting" | "with_doctor" | "completed";
 
   @IsOptional()
-  @IsEnum(['normal', 'urgent'])
-  priority?: 'normal' | 'urgent';
+  @IsEnum(["normal", "urgent"])
+  priority?: "normal" | "urgent";
 
   @IsOptional()
   @IsString()

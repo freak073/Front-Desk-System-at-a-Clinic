@@ -1,10 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from "typeorm";
 
-@Entity('doctors')
-@Index(['specialization'])
-@Index(['status'])
-@Index(['name'])
-@Index(['specialization', 'status'])
+@Entity("doctors")
+@Index(["specialization"])
+@Index(["status"])
+@Index(["name"])
+@Index(["specialization", "status"])
 export class Doctor {
   @PrimaryGeneratedColumn()
   id: number;
@@ -15,28 +22,32 @@ export class Doctor {
   @Column({ length: 100 })
   specialization: string;
 
-  @Column({ 
-    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
-    enum: process.env.NODE_ENV === 'test' ? undefined : ['male', 'female', 'other'],
-    length: process.env.NODE_ENV === 'test' ? 10 : undefined
+  @Column({
+    type: process.env.NODE_ENV === "test" ? "varchar" : "enum",
+    enum:
+      process.env.NODE_ENV === "test" ? undefined : ["male", "female", "other"],
+    length: process.env.NODE_ENV === "test" ? 10 : undefined,
   })
   gender: string;
 
   @Column({ length: 100 })
   location: string;
 
-  @Column({ 
-    type: process.env.NODE_ENV === 'test' ? 'text' : 'json', 
-    name: 'availability_schedule',
-    nullable: true 
+  @Column({
+    type: process.env.NODE_ENV === "test" ? "text" : "json",
+    name: "availability_schedule",
+    nullable: true,
   })
   availabilitySchedule: object;
 
-  @Column({ 
-    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
-    enum: process.env.NODE_ENV === 'test' ? undefined : ['available', 'busy', 'off_duty'],
-    length: process.env.NODE_ENV === 'test' ? 20 : undefined,
-    default: 'available' 
+  @Column({
+    type: process.env.NODE_ENV === "test" ? "varchar" : "enum",
+    enum:
+      process.env.NODE_ENV === "test"
+        ? undefined
+        : ["available", "busy", "off_duty"],
+    length: process.env.NODE_ENV === "test" ? 20 : undefined,
+    default: "available",
   })
   status: string;
 
@@ -44,9 +55,9 @@ export class Doctor {
   // @OneToMany('Appointment', 'doctor')
   // appointments: any[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 }

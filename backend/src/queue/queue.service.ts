@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { QueueEntry } from '../entities/queue-entry.entity';
-import { Patient } from '../entities/patient.entity';
-import { CreateQueueEntryDto, UpdateQueueEntryDto, QueueQueryDto } from './dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { QueueEntry } from "../entities/queue-entry.entity";
+import { Patient } from "../entities/patient.entity";
+import { CreateQueueEntryDto, UpdateQueueEntryDto, QueueQueryDto } from "./dto";
 
 @Injectable()
 export class QueueService {
@@ -14,7 +19,9 @@ export class QueueService {
     private readonly patientRepository: Repository<Patient>,
   ) {}
 
-  async addToQueue(createQueueEntryDto: CreateQueueEntryDto): Promise<QueueEntry> {
+  async addToQueue(
+    createQueueEntryDto: CreateQueueEntryDto,
+  ): Promise<QueueEntry> {
     try {
       // Verify patient exists
       const patient = await this.patientRepository.findOne({
@@ -22,19 +29,21 @@ export class QueueService {
       });
 
       if (!patient) {
-        throw new NotFoundException(`Patient with ID ${createQueueEntryDto.patientId} not found`);
+        throw new NotFoundException(
+          `Patient with ID ${createQueueEntryDto.patientId} not found`,
+        );
       }
 
       // Check if patient is already in queue
       const existingEntry = await this.queueRepository.findOne({
-        where: { 
+        where: {
           patientId: createQueueEntryDto.patientId,
-          status: 'waiting'
+          status: "waiting",
         },
       });
 
       if (existingEntry) {
-        throw new ConflictException('Patient is already in the queue');
+        throw new ConflictException("Patient is already in the queue");
       }
 
       // Generate next queue number
@@ -55,49 +64,61 @@ export class QueueService {
       // Return the entry with patient information
       return await this.findOne(savedEntry.id);
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ConflictException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
-      throw new BadRequestException('Failed to add patient to queue');
+      throw new BadRequestException("Failed to add patient to queue");
     }
   }
 
-  async findAll(query?: QueueQueryDto): Promise<{ entries: QueueEntry[]; total: number; page: number; limit: number; totalPages: number; }> {
-    const queryBuilder = this.queueRepository.createQueryBuilder('queue')
-      .leftJoinAndSelect('queue.patient', 'patient');
+  async findAll(query?: QueueQueryDto): Promise<{
+    entries: QueueEntry[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const queryBuilder = this.queueRepository
+      .createQueryBuilder("queue")
+      .leftJoinAndSelect("queue.patient", "patient");
 
     if (query?.status) {
-      queryBuilder.andWhere('queue.status = :status', { status: query.status });
+      queryBuilder.andWhere("queue.status = :status", { status: query.status });
     }
 
     if (query?.priority) {
-      queryBuilder.andWhere('queue.priority = :priority', { priority: query.priority });
+      queryBuilder.andWhere("queue.priority = :priority", {
+        priority: query.priority,
+      });
     }
 
     if (query?.search) {
       queryBuilder.andWhere(
-        '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
+        "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
         { search: `%${query.search}%` },
       );
     }
 
     if (query?.patientName) {
-      queryBuilder.andWhere('patient.name LIKE :patientName', {
+      queryBuilder.andWhere("patient.name LIKE :patientName", {
         patientName: `%${query.patientName}%`,
       });
     }
 
     // Ordering
     queryBuilder
-      .orderBy('queue.priority', 'DESC')
-      .addOrderBy('queue.queueNumber', 'ASC');
+      .orderBy("queue.priority", "DESC")
+      .addOrderBy("queue.queueNumber", "ASC");
 
     const page = query?.page && query.page > 0 ? query.page : 1;
     const limit = query?.limit && query.limit > 0 ? query.limit : 10;
     const offset = (page - 1) * limit;
 
-  // Count total BEFORE applying pagination (query builder state unchanged yet)
-  const total = await queryBuilder.getCount();
+    // Count total BEFORE applying pagination (query builder state unchanged yet)
+    const total = await queryBuilder.getCount();
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     const entries = await queryBuilder.skip(offset).take(limit).getMany();
@@ -107,7 +128,7 @@ export class QueueService {
   async findOne(id: number): Promise<QueueEntry> {
     const queueEntry = await this.queueRepository.findOne({
       where: { id },
-      relations: ['patient'],
+      relations: ["patient"],
     });
 
     if (!queueEntry) {
@@ -120,21 +141,29 @@ export class QueueService {
   async findByQueueNumber(queueNumber: number): Promise<QueueEntry> {
     const queueEntry = await this.queueRepository.findOne({
       where: { queueNumber },
-      relations: ['patient'],
+      relations: ["patient"],
     });
 
     if (!queueEntry) {
-      throw new NotFoundException(`Queue entry with number ${queueNumber} not found`);
+      throw new NotFoundException(
+        `Queue entry with number ${queueNumber} not found`,
+      );
     }
 
     return queueEntry;
   }
 
-  async updateStatus(id: number, updateQueueEntryDto: UpdateQueueEntryDto): Promise<QueueEntry> {
+  async updateStatus(
+    id: number,
+    updateQueueEntryDto: UpdateQueueEntryDto,
+  ): Promise<QueueEntry> {
     const queueEntry = await this.findOne(id);
 
     // Handle priority changes - reorder queue if priority changes
-    if (updateQueueEntryDto.priority && updateQueueEntryDto.priority !== queueEntry.priority) {
+    if (
+      updateQueueEntryDto.priority &&
+      updateQueueEntryDto.priority !== queueEntry.priority
+    ) {
       await this.handlePriorityChange(queueEntry, updateQueueEntryDto.priority);
     }
 
@@ -142,20 +171,20 @@ export class QueueService {
 
     try {
       const updatedEntry = await this.queueRepository.save(queueEntry);
-      
+
       // Recalculate wait times after status change
       await this.updateEstimatedWaitTimes();
-      
+
       return await this.findOne(updatedEntry.id);
-  } catch {
-      throw new BadRequestException('Failed to update queue entry');
+    } catch {
+      throw new BadRequestException("Failed to update queue entry");
     }
   }
 
   async removeFromQueue(id: number): Promise<void> {
     const queueEntry = await this.findOne(id);
     await this.queueRepository.remove(queueEntry);
-    
+
     // Recalculate wait times after removal
     await this.updateEstimatedWaitTimes();
   }
@@ -167,27 +196,32 @@ export class QueueService {
     urgentWaiting: number;
     averageWaitTime: number;
   }> {
-    const [totalWaiting, totalWithDoctor, totalCompleted, urgentWaiting] = await Promise.all([
-      this.queueRepository.count({ where: { status: 'waiting' } }),
-      this.queueRepository.count({ where: { status: 'with_doctor' } }),
-      this.queueRepository.count({ where: { status: 'completed' } }),
-      this.queueRepository.count({ where: { status: 'waiting', priority: 'urgent' } }),
-    ]);
+    const [totalWaiting, totalWithDoctor, totalCompleted, urgentWaiting] =
+      await Promise.all([
+        this.queueRepository.count({ where: { status: "waiting" } }),
+        this.queueRepository.count({ where: { status: "with_doctor" } }),
+        this.queueRepository.count({ where: { status: "completed" } }),
+        this.queueRepository.count({
+          where: { status: "waiting", priority: "urgent" },
+        }),
+      ]);
 
     // Calculate average wait time for completed entries today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const completedToday = await this.queueRepository
-      .createQueryBuilder('queue')
-      .where('queue.status = :status', { status: 'completed' })
-      .andWhere('queue.arrivalTime >= :today', { today })
+      .createQueryBuilder("queue")
+      .where("queue.status = :status", { status: "completed" })
+      .andWhere("queue.arrivalTime >= :today", { today })
       .getMany();
 
     let averageWaitTime = 0;
     if (completedToday.length > 0) {
       const totalWaitTime = completedToday.reduce((sum, entry) => {
-        const waitTime = (entry.updatedAt.getTime() - entry.arrivalTime.getTime()) / (1000 * 60); // minutes
+        const waitTime =
+          (entry.updatedAt.getTime() - entry.arrivalTime.getTime()) /
+          (1000 * 60); // minutes
         return sum + waitTime;
       }, 0);
       averageWaitTime = Math.round(totalWaitTime / completedToday.length);
@@ -204,11 +238,11 @@ export class QueueService {
 
   async getCurrentQueue(): Promise<QueueEntry[]> {
     return await this.queueRepository.find({
-      where: { status: 'waiting' },
-      relations: ['patient'],
+      where: { status: "waiting" },
+      relations: ["patient"],
       order: {
-        priority: 'DESC', // Urgent first
-        queueNumber: 'ASC', // Then by queue number
+        priority: "DESC", // Urgent first
+        queueNumber: "ASC", // Then by queue number
       },
     });
   }
@@ -217,45 +251,50 @@ export class QueueService {
     // Get the highest queue number for today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const lastEntry = await this.queueRepository
-      .createQueryBuilder('queue')
-      .where('queue.arrivalTime >= :today', { today })
-      .orderBy('queue.queueNumber', 'DESC')
+      .createQueryBuilder("queue")
+      .where("queue.arrivalTime >= :today", { today })
+      .orderBy("queue.queueNumber", "DESC")
       .getOne();
 
     return lastEntry ? lastEntry.queueNumber + 1 : 1;
   }
 
-  private async handlePriorityChange(queueEntry: QueueEntry, newPriority: 'normal' | 'urgent'): Promise<void> {
-    if (newPriority === 'urgent' && queueEntry.priority === 'normal') {
+  private async handlePriorityChange(
+    queueEntry: QueueEntry,
+    newPriority: "normal" | "urgent",
+  ): Promise<void> {
+    if (newPriority === "urgent" && queueEntry.priority === "normal") {
       // Moving to urgent - need to reorder
       const urgentEntries = await this.queueRepository.count({
-        where: { status: 'waiting', priority: 'urgent' },
+        where: { status: "waiting", priority: "urgent" },
       });
-      
+
       // Update queue number to be after all urgent entries
       const newQueueNumber = urgentEntries + 1;
       queueEntry.queueNumber = newQueueNumber;
-    } else if (newPriority === 'normal' && queueEntry.priority === 'urgent') {
+    } else if (newPriority === "normal" && queueEntry.priority === "urgent") {
       // Moving from urgent to normal - assign new queue number at end
       const lastNormalEntry = await this.queueRepository
-        .createQueryBuilder('queue')
-        .where('queue.status = :status', { status: 'waiting' })
-        .andWhere('queue.priority = :priority', { priority: 'normal' })
-        .orderBy('queue.queueNumber', 'DESC')
+        .createQueryBuilder("queue")
+        .where("queue.status = :status", { status: "waiting" })
+        .andWhere("queue.priority = :priority", { priority: "normal" })
+        .orderBy("queue.queueNumber", "DESC")
         .getOne();
-      
-      queueEntry.queueNumber = lastNormalEntry ? lastNormalEntry.queueNumber + 1 : await this.generateNextQueueNumber();
+
+      queueEntry.queueNumber = lastNormalEntry
+        ? lastNormalEntry.queueNumber + 1
+        : await this.generateNextQueueNumber();
     }
   }
 
   private async updateEstimatedWaitTimes(): Promise<void> {
     const waitingEntries = await this.queueRepository.find({
-      where: { status: 'waiting' },
+      where: { status: "waiting" },
       order: {
-        priority: 'DESC',
-        queueNumber: 'ASC',
+        priority: "DESC",
+        queueNumber: "ASC",
       },
     });
 
@@ -265,9 +304,9 @@ export class QueueService {
     for (const entry of waitingEntries) {
       entry.estimatedWaitTime = cumulativeWaitTime;
       cumulativeWaitTime += averageConsultationTime;
-      
+
       // Add extra time for urgent cases
-      if (entry.priority === 'urgent') {
+      if (entry.priority === "urgent") {
         cumulativeWaitTime += 5; // Extra 5 minutes for urgent cases
       }
     }
@@ -280,16 +319,17 @@ export class QueueService {
       return [];
     }
 
-    const queryBuilder = this.queueRepository.createQueryBuilder('queue')
-      .leftJoinAndSelect('queue.patient', 'patient')
+    const queryBuilder = this.queueRepository
+      .createQueryBuilder("queue")
+      .leftJoinAndSelect("queue.patient", "patient")
       .where(
-        '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
+        "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
         { search: `%${searchTerm.trim()}%` },
       );
 
     return await queryBuilder
-      .orderBy('queue.priority', 'DESC')
-      .addOrderBy('queue.queueNumber', 'ASC')
+      .orderBy("queue.priority", "DESC")
+      .addOrderBy("queue.queueNumber", "ASC")
       .limit(50)
       .getMany();
   }

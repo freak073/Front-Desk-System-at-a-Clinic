@@ -1,6 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
-@Entity('users')
+@Entity("users")
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -8,19 +14,22 @@ export class User {
   @Column({ unique: true, length: 50 })
   username: string;
 
-  @Column({ name: 'password_hash', length: 255 })
+  @Column({ name: "password_hash", length: 255 })
   passwordHash: string;
 
-  @Column({ 
-    type: 'enum', 
-    enum: ['front_desk'], 
-    default: 'front_desk' 
+  @Column({
+    type: "enum",
+    enum: ["admin", "staff"],
+    default: "staff",
   })
   role: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @Column({ name: "full_name", length: 100, nullable: true })
+  fullName?: string;
+
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 }

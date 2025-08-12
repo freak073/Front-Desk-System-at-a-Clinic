@@ -11,14 +11,33 @@ import { getRepositoryToken } from "@nestjs/typeorm";
 import * as bcrypt from "bcrypt";
 
 // Helper to generate a valid appointment datetime (future weekday)
-function getValidFutureWeekdayISODate(daysAhead = 1) {
-  let date = new Date();
+function getValidFutureWeekdayISODate(daysAhead = 1): string {
+  const date = new Date();
   date.setDate(date.getDate() + daysAhead);
   while (date.getDay() === 0 || date.getDay() === 6) {
     date.setDate(date.getDate() + 1);
   }
   date.setHours(10, 0, 0, 0);
   return date.toISOString();
+}
+
+// Generic API envelope for tests
+interface ApiEnvelope<T, M = any> {
+  success: boolean;
+  data: T;
+  meta?: M;
+  message?: string;
+}
+
+interface AppointmentDto {
+  id: number;
+  patientId: number;
+  doctorId: number;
+  status: string;
+  notes?: string | null;
+  appointmentDatetime: string;
+  patient?: { id: number; name: string };
+  doctor?: { id: number; name: string };
 }
 
 describe("AppointmentsController (Integration)", () => {
@@ -82,8 +101,11 @@ describe("AppointmentsController (Integration)", () => {
       .post("/auth/login")
       .send({ username: "testuser", password: "password123" })
       .expect(200);
-
-    authToken = loginResponse.body.access_token;
+    const loginBody = loginResponse.body as ApiEnvelope<{
+      access_token: string;
+      user: { id: number; username: string; role: string };
+    }>;
+    authToken = loginBody.data.access_token;
   });
 
   describe("POST /appointments", () => {
@@ -118,11 +140,12 @@ describe("AppointmentsController (Integration)", () => {
         .send(appointmentData)
         .expect(201);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toHaveProperty("id");
-      expect(response.body.data.patientId).toBe(patient.id);
-      expect(response.body.data.doctorId).toBe(doctor.id);
-      expect(response.body.data.status).toBe("booked");
+      const body = response.body as ApiEnvelope<AppointmentDto>;
+      expect(body.success).toBe(true);
+      expect(body.data).toHaveProperty("id");
+      expect(body.data.patientId).toBe(patient.id);
+      expect(body.data.doctorId).toBe(doctor.id);
+      expect(body.data.status).toBe("booked");
     });
 
     it("should return 404 if patient does not exist", async () => {
@@ -148,7 +171,8 @@ describe("AppointmentsController (Integration)", () => {
         .send(appointmentData)
         .expect(404);
 
-      expect(response.body.message).toContain("Patient with ID 999 not found");
+      const body = response.body as { message?: string };
+      expect(body.message).toContain("Patient with ID 999 not found");
     });
 
     it("should return 400 if appointment time is in the past", async () => {
@@ -170,7 +194,7 @@ describe("AppointmentsController (Integration)", () => {
       );
 
       // Generate a valid weekday, but in the past
-      let pastDate = new Date();
+      const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 2);
       while (pastDate.getDay() === 0 || pastDate.getDay() === 6) {
         pastDate.setDate(pastDate.getDate() - 1);
@@ -189,7 +213,8 @@ describe("AppointmentsController (Integration)", () => {
         .send(appointmentData)
         .expect(400);
 
-      expect(response.body.message).toContain("Appointment time must be in the future");
+      const body = response.body as { message?: string };
+      expect(body.message).toContain("Appointment time must be in the future");
     });
   });
 
@@ -212,7 +237,7 @@ describe("AppointmentsController (Integration)", () => {
         }),
       );
 
-      const appointment = await appointmentRepository.save(
+      await appointmentRepository.save(
         appointmentRepository.create({
           patientId: patient.id,
           doctorId: doctor.id,
@@ -226,11 +251,15 @@ describe("AppointmentsController (Integration)", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toBeInstanceOf(Array);
-      expect(response.body.data.length).toBe(1);
-  expect(response.body.meta).toHaveProperty("total");
-  expect(response.body.meta).toHaveProperty("totalPages");
+      const body = response.body as ApiEnvelope<
+        AppointmentDto[],
+        { total: number; totalPages: number }
+      >;
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBe(1);
+      expect(body.meta).toHaveProperty("total");
+      expect(body.meta).toHaveProperty("totalPages");
     });
 
     it("should filter appointments by status", async () => {
@@ -251,7 +280,7 @@ describe("AppointmentsController (Integration)", () => {
         }),
       );
 
-      const bookedAppointment = await appointmentRepository.save(
+      await appointmentRepository.save(
         appointmentRepository.create({
           patientId: patient.id,
           doctorId: doctor.id,
@@ -260,10 +289,10 @@ describe("AppointmentsController (Integration)", () => {
         }),
       );
 
-      let completedDate = new Date(getValidFutureWeekdayISODate());
+      const completedDate = new Date(getValidFutureWeekdayISODate());
       completedDate.setDate(completedDate.getDate() + 1);
 
-      const completedAppointment = await appointmentRepository.save(
+      await appointmentRepository.save(
         appointmentRepository.create({
           patientId: patient.id,
           doctorId: doctor.id,
@@ -277,10 +306,11 @@ describe("AppointmentsController (Integration)", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toBeInstanceOf(Array);
-      expect(response.body.data.length).toBe(1);
-      expect(response.body.data[0].status).toBe("booked");
+      const body = response.body as ApiEnvelope<AppointmentDto[]>;
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBe(1);
+      expect(body.data[0].status).toBe("booked");
     });
   });
 
@@ -317,10 +347,11 @@ describe("AppointmentsController (Integration)", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.id).toBe(appointment.id);
-      expect(response.body.data.patient).toBeDefined();
-      expect(response.body.data.doctor).toBeDefined();
+      const body = response.body as ApiEnvelope<AppointmentDto>;
+      expect(body.success).toBe(true);
+      expect(body.data.id).toBe(appointment.id);
+      expect(body.data.patient).toBeDefined();
+      expect(body.data.doctor).toBeDefined();
     });
 
     it("should return 404 for non-existent appointment", async () => {
@@ -329,7 +360,8 @@ describe("AppointmentsController (Integration)", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .expect(404);
 
-      expect(response.body.message).toContain("Appointment with ID 999 not found");
+      const body = response.body as { message?: string };
+      expect(body.message).toContain("Appointment with ID 999 not found");
     });
   });
 
@@ -372,9 +404,10 @@ describe("AppointmentsController (Integration)", () => {
         .send(updateData)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.status).toBe("completed");
-      expect(response.body.data.notes).toBe("Appointment completed successfully");
+      const body = response.body as ApiEnvelope<AppointmentDto>;
+      expect(body.success).toBe(true);
+      expect(body.data.status).toBe("completed");
+      expect(body.data.notes).toBe("Appointment completed successfully");
     });
   });
 
@@ -430,35 +463,38 @@ describe("AppointmentsController (Integration)", () => {
       await doctorRepository.save(doctor);
 
       // Fetch the doctor from DB to ensure id is set
-      const savedDoctor = await doctorRepository.findOne({ where: { name: "Dr. Smith" } });
+      const savedDoctor = await doctorRepository.findOne({
+        where: { name: "Dr. Smith" },
+      });
       expect(savedDoctor).toBeDefined();
-      expect(typeof savedDoctor.id).toBe('number');
+      expect(typeof savedDoctor.id).toBe("number");
 
       // Generate a valid ISO date string for a future weekday (YYYY-MM-DD)
-      let date = new Date();
+      const date = new Date();
       date.setDate(date.getDate() + 1);
       while (date.getDay() === 0 || date.getDay() === 6) {
         date.setDate(date.getDate() + 1);
       }
-      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
 
       const response = await request(app.getHttpServer())
-        .get('/appointments/available-slots')
+        .get("/appointments/available-slots")
         .query({
           doctorId: savedDoctor.id,
           date: dateStr,
         })
-        .set('Authorization', `Bearer ${authToken}`);
+        .set("Authorization", `Bearer ${authToken}`);
 
       if (response.status !== 200) {
         // Print the error response for debugging
         // eslint-disable-next-line no-console
-        console.log('Available slots error response:', response.body);
+        console.log("Available slots error response:", response.body);
       }
       expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(Array.isArray(response.body.data)).toBe(true);
-      expect(response.body.data.length).toBeGreaterThan(0);
+      const body = response.body as ApiEnvelope<string[]>;
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
     });
   });
 
@@ -481,7 +517,7 @@ describe("AppointmentsController (Integration)", () => {
         }),
       );
 
-      const bookedAppointment = await appointmentRepository.save(
+      await appointmentRepository.save(
         appointmentRepository.create({
           patientId: patient.id,
           doctorId: doctor.id,
@@ -490,10 +526,10 @@ describe("AppointmentsController (Integration)", () => {
         }),
       );
 
-      let completedDate2 = new Date(getValidFutureWeekdayISODate());
+      const completedDate2 = new Date(getValidFutureWeekdayISODate());
       completedDate2.setDate(completedDate2.getDate() + 1);
 
-      const completedAppointment = await appointmentRepository.save(
+      await appointmentRepository.save(
         appointmentRepository.create({
           patientId: patient.id,
           doctorId: doctor.id,
@@ -507,11 +543,14 @@ describe("AppointmentsController (Integration)", () => {
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toBeInstanceOf(Array);
-      expect(response.body.data.length).toBeGreaterThan(0);
-      expect(response.body.data[0]).toHaveProperty("status");
-      expect(response.body.data[0]).toHaveProperty("count");
+      const body = response.body as ApiEnvelope<
+        Array<{ status: string; count: number }>
+      >;
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.data[0]).toHaveProperty("status");
+      expect(body.data[0]).toHaveProperty("count");
     });
   });
 

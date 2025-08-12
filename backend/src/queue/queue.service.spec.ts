@@ -1,13 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { QueueService } from './queue.service';
-import { QueueEntry } from '../entities/queue-entry.entity';
-import { Patient } from '../entities/patient.entity';
-import { CreateQueueEntryDto, UpdateQueueEntryDto, QueueQueryDto } from './dto';
+import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import { QueueService } from "./queue.service";
+import { QueueEntry } from "../entities/queue-entry.entity";
+import { Patient } from "../entities/patient.entity";
+import { CreateQueueEntryDto, UpdateQueueEntryDto, QueueQueryDto } from "./dto";
 
-describe('QueueService', () => {
+describe("QueueService", () => {
   let service: QueueService;
   let queueRepository: Repository<QueueEntry>;
   let patientRepository: Repository<Patient>;
@@ -33,11 +37,11 @@ describe('QueueService', () => {
     orderBy: jest.fn().mockReturnThis(),
     addOrderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
-  skip: jest.fn().mockReturnThis(),
-  take: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
     getOne: jest.fn(),
-  getCount: jest.fn(),
+    getCount: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -56,36 +60,36 @@ describe('QueueService', () => {
     }).compile();
 
     service = module.get<QueueService>(QueueService);
-  // Repositories fetched via DI (not directly used in tests after mocking)
+    // Repositories fetched via DI (not directly used in tests after mocking)
 
     // Reset all mocks
     jest.clearAllMocks();
     mockQueueRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(service).toBeDefined();
   });
 
-  describe('addToQueue', () => {
+  describe("addToQueue", () => {
     const createQueueEntryDto: CreateQueueEntryDto = {
       patientId: 1,
-      priority: 'normal',
+      priority: "normal",
     };
 
     const mockPatient = {
       id: 1,
-      name: 'John Doe',
-      contactInfo: 'john@example.com',
-      medicalRecordNumber: 'MRN-001',
+      name: "John Doe",
+      contactInfo: "john@example.com",
+      medicalRecordNumber: "MRN-001",
     };
 
     const mockQueueEntry = {
       id: 1,
       patientId: 1,
       queueNumber: 1,
-      status: 'waiting',
-      priority: 'normal',
+      status: "waiting",
+      priority: "normal",
       arrivalTime: new Date(),
       estimatedWaitTime: 0,
       patient: mockPatient,
@@ -93,7 +97,7 @@ describe('QueueService', () => {
       updatedAt: new Date(),
     };
 
-    it('should add patient to queue successfully', async () => {
+    it("should add patient to queue successfully", async () => {
       mockPatientRepository.findOne.mockResolvedValue(mockPatient);
       mockQueueRepository.findOne
         .mockResolvedValueOnce(null) // No existing entry check
@@ -113,44 +117,48 @@ describe('QueueService', () => {
       expect(result).toEqual(mockQueueEntry);
     });
 
-    it('should throw NotFoundException if patient does not exist', async () => {
+    it("should throw NotFoundException if patient does not exist", async () => {
       mockPatientRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.addToQueue(createQueueEntryDto)).rejects.toThrow(NotFoundException);
+      await expect(service.addToQueue(createQueueEntryDto)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockPatientRepository.findOne).toHaveBeenCalledWith({
         where: { id: createQueueEntryDto.patientId },
       });
     });
 
-    it('should throw ConflictException if patient is already in queue', async () => {
+    it("should throw ConflictException if patient is already in queue", async () => {
       mockPatientRepository.findOne.mockResolvedValue(mockPatient);
       mockQueueRepository.findOne.mockResolvedValue(mockQueueEntry); // Existing entry
 
-      await expect(service.addToQueue(createQueueEntryDto)).rejects.toThrow(ConflictException);
+      await expect(service.addToQueue(createQueueEntryDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
   });
 
-  describe('findAll', () => {
+  describe("findAll", () => {
     const mockQueueEntries = [
       {
         id: 1,
         patientId: 1,
         queueNumber: 1,
-        status: 'waiting',
-        priority: 'urgent',
-        patient: { name: 'John Doe' },
+        status: "waiting",
+        priority: "urgent",
+        patient: { name: "John Doe" },
       },
       {
         id: 2,
         patientId: 2,
         queueNumber: 2,
-        status: 'waiting',
-        priority: 'normal',
-        patient: { name: 'Jane Smith' },
+        status: "waiting",
+        priority: "normal",
+        patient: { name: "Jane Smith" },
       },
     ];
 
-    it('should return paginated queue entries without query', async () => {
+    it("should return paginated queue entries without query", async () => {
       mockQueryBuilder.getMany.mockResolvedValue(mockQueueEntries);
       mockQueryBuilder.getCount = jest.fn().mockResolvedValue(2);
 
@@ -163,115 +171,123 @@ describe('QueueService', () => {
       expect(result.totalPages).toBe(1);
     });
 
-    it('should filter by status', async () => {
-      const query: QueueQueryDto = { status: 'waiting' };
-      mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
-      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
-
-      const result = await service.findAll(query);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.status = :status', { status: 'waiting' });
-      expect(result.entries).toEqual([mockQueueEntries[0]]);
-      expect(result.total).toBe(1);
-    });
-
-    it('should filter by priority', async () => {
-      const query: QueueQueryDto = { priority: 'urgent' };
-      mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
-      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
-
-      const result = await service.findAll(query);
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('queue.priority = :priority', { priority: 'urgent' });
-      expect(result.entries).toEqual([mockQueueEntries[0]]);
-    });
-
-    it('should search by patient information', async () => {
-      const query: QueueQueryDto = { search: 'John' };
+    it("should filter by status", async () => {
+      const query: QueueQueryDto = { status: "waiting" };
       mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
       mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
 
       const result = await service.findAll(query);
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
-        { search: '%John%' },
+        "queue.status = :status",
+        { status: "waiting" },
+      );
+      expect(result.entries).toEqual([mockQueueEntries[0]]);
+      expect(result.total).toBe(1);
+    });
+
+    it("should filter by priority", async () => {
+      const query: QueueQueryDto = { priority: "urgent" };
+      mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
+
+      const result = await service.findAll(query);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "queue.priority = :priority",
+        { priority: "urgent" },
+      );
+      expect(result.entries).toEqual([mockQueueEntries[0]]);
+    });
+
+    it("should search by patient information", async () => {
+      const query: QueueQueryDto = { search: "John" };
+      mockQueryBuilder.getMany.mockResolvedValue([mockQueueEntries[0]]);
+      mockQueryBuilder.getCount = jest.fn().mockResolvedValue(1);
+
+      const result = await service.findAll(query);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
+        { search: "%John%" },
       );
       expect(result.entries).toEqual([mockQueueEntries[0]]);
     });
   });
 
-  describe('findOne', () => {
+  describe("findOne", () => {
     const mockQueueEntry = {
       id: 1,
       patientId: 1,
       queueNumber: 1,
-      status: 'waiting',
-      priority: 'normal',
-      patient: { name: 'John Doe' },
+      status: "waiting",
+      priority: "normal",
+      patient: { name: "John Doe" },
     };
 
-    it('should return queue entry by id', async () => {
+    it("should return queue entry by id", async () => {
       mockQueueRepository.findOne.mockResolvedValue(mockQueueEntry);
 
       const result = await service.findOne(1);
 
       expect(mockQueueRepository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
-        relations: ['patient'],
+        relations: ["patient"],
       });
       expect(result).toEqual(mockQueueEntry);
     });
 
-    it('should throw NotFoundException if queue entry not found', async () => {
+    it("should throw NotFoundException if queue entry not found", async () => {
       mockQueueRepository.findOne.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('findByQueueNumber', () => {
+  describe("findByQueueNumber", () => {
     const mockQueueEntry = {
       id: 1,
       patientId: 1,
       queueNumber: 1,
-      status: 'waiting',
-      priority: 'normal',
-      patient: { name: 'John Doe' },
+      status: "waiting",
+      priority: "normal",
+      patient: { name: "John Doe" },
     };
 
-    it('should return queue entry by queue number', async () => {
+    it("should return queue entry by queue number", async () => {
       mockQueueRepository.findOne.mockResolvedValue(mockQueueEntry);
 
       const result = await service.findByQueueNumber(1);
 
       expect(mockQueueRepository.findOne).toHaveBeenCalledWith({
         where: { queueNumber: 1 },
-        relations: ['patient'],
+        relations: ["patient"],
       });
       expect(result).toEqual(mockQueueEntry);
     });
 
-    it('should throw NotFoundException if queue entry not found', async () => {
+    it("should throw NotFoundException if queue entry not found", async () => {
       mockQueueRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findByQueueNumber(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findByQueueNumber(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('updateStatus', () => {
+  describe("updateStatus", () => {
     const mockQueueEntry = {
       id: 1,
       patientId: 1,
       queueNumber: 1,
-      status: 'waiting',
-      priority: 'normal',
-      patient: { name: 'John Doe' },
+      status: "waiting",
+      priority: "normal",
+      patient: { name: "John Doe" },
     };
 
     const updateDto: UpdateQueueEntryDto = {
-      status: 'with_doctor',
+      status: "with_doctor",
     };
 
-    it('should update queue entry status', async () => {
-      const updatedEntry = { ...mockQueueEntry, status: 'with_doctor' };
+    it("should update queue entry status", async () => {
+      const updatedEntry = { ...mockQueueEntry, status: "with_doctor" };
 
       mockQueueRepository.findOne
         .mockResolvedValueOnce(mockQueueEntry) // findOne call
@@ -285,24 +301,26 @@ describe('QueueService', () => {
       expect(result).toEqual(updatedEntry);
     });
 
-    it('should throw NotFoundException if queue entry not found', async () => {
+    it("should throw NotFoundException if queue entry not found", async () => {
       mockQueueRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.updateStatus(999, updateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.updateStatus(999, updateDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('removeFromQueue', () => {
+  describe("removeFromQueue", () => {
     const mockQueueEntry = {
       id: 1,
       patientId: 1,
       queueNumber: 1,
-      status: 'waiting',
-      priority: 'normal',
-      patient: { name: 'John Doe' },
+      status: "waiting",
+      priority: "normal",
+      patient: { name: "John Doe" },
     };
 
-    it('should remove queue entry', async () => {
+    it("should remove queue entry", async () => {
       mockQueueRepository.findOne.mockResolvedValue(mockQueueEntry);
       mockQueueRepository.remove.mockResolvedValue(mockQueueEntry);
       mockQueueRepository.find.mockResolvedValue([]); // For updateEstimatedWaitTimes
@@ -311,20 +329,22 @@ describe('QueueService', () => {
 
       expect(mockQueueRepository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
-        relations: ['patient'],
+        relations: ["patient"],
       });
       expect(mockQueueRepository.remove).toHaveBeenCalledWith(mockQueueEntry);
     });
 
-    it('should throw NotFoundException if queue entry not found', async () => {
+    it("should throw NotFoundException if queue entry not found", async () => {
       mockQueueRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.removeFromQueue(999)).rejects.toThrow(NotFoundException);
+      await expect(service.removeFromQueue(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('getQueueStats', () => {
-    it('should return queue statistics', async () => {
+  describe("getQueueStats", () => {
+    it("should return queue statistics", async () => {
       mockQueueRepository.count
         .mockResolvedValueOnce(5) // totalWaiting
         .mockResolvedValueOnce(2) // totalWithDoctor
@@ -354,73 +374,73 @@ describe('QueueService', () => {
     });
   });
 
-  describe('getCurrentQueue', () => {
+  describe("getCurrentQueue", () => {
     const mockCurrentQueue = [
       {
         id: 1,
-        status: 'waiting',
-        priority: 'urgent',
+        status: "waiting",
+        priority: "urgent",
         queueNumber: 1,
-        patient: { name: 'John Doe' },
+        patient: { name: "John Doe" },
       },
       {
         id: 2,
-        status: 'waiting',
-        priority: 'normal',
+        status: "waiting",
+        priority: "normal",
         queueNumber: 2,
-        patient: { name: 'Jane Smith' },
+        patient: { name: "Jane Smith" },
       },
     ];
 
-    it('should return current waiting queue', async () => {
+    it("should return current waiting queue", async () => {
       mockQueueRepository.find.mockResolvedValue(mockCurrentQueue);
 
       const result = await service.getCurrentQueue();
 
       expect(mockQueueRepository.find).toHaveBeenCalledWith({
-        where: { status: 'waiting' },
-        relations: ['patient'],
+        where: { status: "waiting" },
+        relations: ["patient"],
         order: {
-          priority: 'DESC',
-          queueNumber: 'ASC',
+          priority: "DESC",
+          queueNumber: "ASC",
         },
       });
       expect(result).toEqual(mockCurrentQueue);
     });
   });
 
-  describe('searchQueue', () => {
+  describe("searchQueue", () => {
     const mockSearchResults = [
       {
         id: 1,
-        patient: { name: 'John Doe' },
-        priority: 'normal',
+        patient: { name: "John Doe" },
+        priority: "normal",
         queueNumber: 1,
       },
     ];
 
-    it('should return search results', async () => {
+    it("should return search results", async () => {
       mockQueryBuilder.getMany.mockResolvedValue(mockSearchResults);
 
-      const result = await service.searchQueue('John');
+      const result = await service.searchQueue("John");
 
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        '(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)',
-        { search: '%John%' },
+        "(patient.name LIKE :search OR patient.contactInfo LIKE :search OR patient.medicalRecordNumber LIKE :search)",
+        { search: "%John%" },
       );
       expect(mockQueryBuilder.limit).toHaveBeenCalledWith(50);
       expect(result).toEqual(mockSearchResults);
     });
 
-    it('should return empty array for empty search term', async () => {
-      const result = await service.searchQueue('');
+    it("should return empty array for empty search term", async () => {
+      const result = await service.searchQueue("");
 
       expect(result).toEqual([]);
       expect(mockQueueRepository.createQueryBuilder).not.toHaveBeenCalled();
     });
 
-    it('should return empty array for whitespace search term', async () => {
-      const result = await service.searchQueue('   ');
+    it("should return empty array for whitespace search term", async () => {
+      const result = await service.searchQueue("   ");
 
       expect(result).toEqual([]);
       expect(mockQueueRepository.createQueryBuilder).not.toHaveBeenCalled();

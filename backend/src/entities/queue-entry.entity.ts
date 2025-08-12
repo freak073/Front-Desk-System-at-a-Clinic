@@ -1,58 +1,67 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from "typeorm";
 
-@Entity('queue_entries')
-@Index(['queueNumber'])
-@Index(['status'])
-@Index(['priority'])
-@Index(['arrivalTime'])
+@Entity("queue_entries")
+@Index(["queueNumber"])
+@Index(["status"])
+@Index(["priority"])
+@Index(["arrivalTime"])
 export class QueueEntry {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'patient_id' })
+  @Column({ name: "patient_id" })
   patientId: number;
 
-  @Column({ name: 'queue_number' })
+  @Column({ name: "queue_number" })
   queueNumber: number;
 
-  @Column({ 
-    type: 'enum', 
-    enum: ['waiting', 'with_doctor', 'completed'], 
-    default: 'waiting' 
+  @Column({
+    type: "enum",
+    enum: ["waiting", "with_doctor", "completed"],
+    default: "waiting",
   })
   status: string;
 
-  @Column({ 
-    type: 'enum', 
-    enum: ['normal', 'urgent'], 
-    default: 'normal' 
+  @Column({
+    type: "enum",
+    enum: ["normal", "urgent"],
+    default: "normal",
   })
   priority: string;
 
-  @Column({ 
-    name: 'arrival_time', 
-    type: 'timestamp', 
-    default: () => 'CURRENT_TIMESTAMP' 
+  @Column({
+    name: "arrival_time",
+    type: "timestamp",
+    default: () => "CURRENT_TIMESTAMP",
   })
   arrivalTime: Date;
 
-  @Column({ 
-    name: 'estimated_wait_time', 
+  @Column({
+    name: "estimated_wait_time",
     nullable: true,
-    comment: 'Estimated wait time in minutes'
+    comment: "Estimated wait time in minutes",
   })
   estimatedWaitTime: number;
 
-  @ManyToOne('Patient', 'queueEntries', { 
-    onDelete: 'CASCADE',
-    eager: true 
+  @ManyToOne("Patient", "queueEntries", {
+    onDelete: "CASCADE",
+    eager: true,
   })
-  @JoinColumn({ name: 'patient_id' })
+  @JoinColumn({ name: "patient_id" })
   patient: any;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ name: "updated_at" })
   updatedAt: Date;
 }

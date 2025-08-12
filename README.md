@@ -205,4 +205,47 @@ Run tests using the commands mentioned in the Development Commands section.
 ## License
 
 This project is licensed under the MIT License.
-\n## Deployment (Docker)\n\nRun the full stack with Docker Compose:\n\n```bash\ndocker compose build\ndocker compose up -d\n```\n\nServices:\n- Frontend: http://localhost:3000\n- Backend API: http://localhost:3001\n- MySQL: localhost:3307 (mapped)\n\nEnvironment variables live in `docker-compose.yml` and `backend/.env.example`. Replace defaults (especially JWT_SECRET) before production.\n\n### Production Hardening Checklist\n- Set strong, rotated `JWT_SECRET`.\n- Use dedicated DB credentials / least privilege.\n- Enforce HTTPS & HSTS at the reverse proxy.\n- Tighten CORS to explicit domains (no wildcards).\n- Re-enable strict CSP in `main.ts` (remove dev relaxation).\n- Monitor rate limit metrics & tune thresholds.\n- Add structured logging & centralized aggregation.\n\n### Future Enhancements\n- Health & readiness endpoints.\n- Prometheus metrics export.\n- Audit log persistence for critical actions.\n- Automated database migrations in entrypoint.\n\n## Security Reference\nSee `backend/SECURITY.md` for details on helmet, throttling, cache and logging controls.\n
+\n## Deployment (Docker)\n\nRun the full stack with Docker Compose:\n\n```bash\ndocker compose build\ndocker compose up -d\n```\n\nServices:\n- Frontend: http://localhost:3000\n- Backend API: http://localhost:3001\n- MySQL: localhost:3307 (mapped)\n\nEnvironment variables live in `docker-compose.yml` and `backend/.env.example`. Replace defaults (especially JWT_SECRET) before production.\n\n### Production Hardening Checklist\n- Set strong, rotated `JWT_SECRET`.\n- Use dedicated DB credentials / least privilege.\n- Enforce HTTPS & HSTS at the reverse proxy.\n- Tighten CORS to explicit domains (no wildcards).\n- Re-enable strict CSP in `main.ts` (remove dev relaxation).\n- Monitor rate limit metrics & tune thresholds.\n- Add structured logging & centralized aggregation.\n\n### Future Enhancements\n- Health & readiness endpoints.\n- Prometheus metrics export.\n- Audit log persistence for critical actions.\n- Automated database migrations in entrypoint.\n\n## Security Reference
+See `backend/SECURITY.md` for details on helmet, throttling, cache and logging controls.
+
+## Database Environment Flow
+
+Central DB name resolution lives in `backend/src/database/db-config.ts`.
+
+Resolution rules:
+- `NODE_ENV === test` -> `clinic_test`
+- Else -> `DB_NAME` env var or fallback `front_desk_system`
+
+Startup guards:
+- Production must use DB name `front_desk_system` (abort otherwise)
+- Test DB `clinic_test` rejected outside test env
+
+Seeding safety (idempotent by default):
+- `SEED_LOCK` file prevents accidental destructive reseed
+- Normal `npm run seed` only inserts missing baseline + sample data
+- Full reset only when BOTH `ALLOW_DB_RESET=true` and `IGNORE_SEED_LOCK=true` (or lock removed)
+
+Flags:
+- `ALLOW_DB_RESET` enables truncation path (never set in production)
+- `IGNORE_SEED_LOCK` bypasses the lock (use with caution)
+
+Key scripts:
+- `npm run migrate` / `migrate:revert` / `migrate:generate`
+- `npm run seed` (safe / top-up)
+- `npm run db:count` (table counts for quick diagnostics)
+
+Typical flows:
+1. Fresh local: migrate -> seed -> start
+2. Add sample data again: seed (idempotent)
+3. Full dev reset: delete `SEED_LOCK` + set both flags -> seed
+4. CI: `NODE_ENV=test`, migrate (or sync), run tests (isolated DB)
+5. Prod initial: set production env vars, migrate once, seed once (lock created)
+
+Observability:
+- Boot log `[BOOT]` prints sanitized DB config snapshot
+- `/monitoring/ready` exposes table counts to detect empty/drift
+
+Rationale:
+- Centralization avoids drift between runtime, migrations & seed scripts
+- Lock + flags protect against unintended data loss
+- Guards fail fast before harmful operations
