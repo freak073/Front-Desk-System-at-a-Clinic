@@ -26,11 +26,11 @@ const DashboardPage = () => {
     <div className="min-h-screen bg-surface-900 text-gray-100">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-white mb-2">Front Desk Dashboard</h1>
+      <div className="responsive-container">
+        <div className="mb-4 md:mb-6">
+          <h1 className="responsive-text-2xl font-semibold text-white mb-2">Front Desk Dashboard</h1>
           {user && (
-            <p className="text-gray-400">
+            <p className="responsive-text-base text-gray-400">
               Welcome back, {user.username}. Here's what's happening today.
             </p>
           )}
@@ -41,7 +41,7 @@ const DashboardPage = () => {
         <div className="mt-6">
           <DashboardOverview stats={stats} isLoading={isLoading} />
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="responsive-card-stack">
             <div className="bg-surface-800 border border-gray-700 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
               <div className="space-y-3">

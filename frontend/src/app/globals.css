@@ -70,27 +70,35 @@
 
   /* Responsive Design Classes */
   .mobile-container {
-    @apply px-4 py-6;
+    @apply px-4 py-4 mobile:px-3 mobile:py-3;
   }
 
   .tablet-container {
-    @apply px-6 py-8;
+    @apply px-6 py-6 tablet:px-5 tablet:py-5;
   }
 
   .desktop-container {
-    @apply px-8 py-10;
+    @apply px-8 py-8 desktop:px-10 desktop:py-10;
+  }
+
+  .responsive-container {
+    @apply px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8;
   }
 
   .mobile-grid {
-    @apply grid grid-cols-1 gap-4;
+    @apply grid grid-cols-1 gap-3 mobile:gap-2;
   }
 
   .tablet-grid {
-    @apply grid grid-cols-2 gap-6;
+    @apply grid grid-cols-2 gap-4 tablet:gap-3;
   }
 
   .desktop-grid {
-    @apply grid grid-cols-3 gap-8;
+    @apply grid grid-cols-3 gap-6 desktop:gap-8;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-8;
   }
 
   .responsive-table {
@@ -101,36 +109,159 @@
     @apply min-w-full;
   }
 
+  /* Visibility Classes */
   .mobile-hidden {
-    @apply hidden sm:table-cell;
+    @apply hidden sm:block;
   }
 
   .tablet-hidden {
-    @apply hidden md:table-cell;
+    @apply hidden md:block;
   }
 
   .desktop-hidden {
-    @apply hidden lg:table-cell;
+    @apply hidden lg:block;
   }
 
   .mobile-only {
-    @apply sm:hidden;
+    @apply block sm:hidden;
   }
 
   .tablet-only {
-    @apply md:hidden;
+    @apply hidden sm:block md:hidden;
   }
 
   .desktop-only {
-    @apply lg:hidden;
+    @apply hidden lg:block;
   }
 
+  /* Touch-Friendly Classes */
+  .touch-target {
+    @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
+  }
+
+  .touch-button {
+    @apply touch-target px-4 py-2 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent-500;
+  }
+
+  .touch-input {
+    @apply min-h-[44px] px-3 py-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-accent-500;
+  }
+
+  .touch-select {
+    @apply min-h-[44px] px-3 py-2 rounded-md border focus:outline-none focus:ring-2 focus:ring-accent-500;
+  }
+
+  /* Collapsible Menu */
   .collapsible-menu {
     @apply md:hidden;
   }
 
   .collapsible-menu.open {
     @apply block;
+  }
+
+  /* Hover Effects for Desktop */
+  .desktop-hover {
+    @apply desktop:hover:shadow-md desktop:hover:scale-105 desktop:transition-all desktop:duration-200;
+  }
+
+  .desktop-hover-subtle {
+    @apply desktop:hover:shadow-sm desktop:hover:bg-opacity-80 desktop:transition-all desktop:duration-200;
+  }
+
+  /* Swipe Gesture Support */
+  .swipe-container {
+    @apply touch-pan-x;
+  }
+
+  .swipe-indicator {
+    @apply absolute top-1 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-gray-600 rounded-full;
+  }
+
+  /* Responsive Typography */
+  .responsive-text-xs {
+    @apply text-xs mobile:text-[10px];
+  }
+
+  .responsive-text-sm {
+    @apply text-sm mobile:text-xs;
+  }
+
+  .responsive-text-base {
+    @apply text-base mobile:text-sm;
+  }
+
+  .responsive-text-lg {
+    @apply text-lg mobile:text-base;
+  }
+
+  .responsive-text-xl {
+    @apply text-xl mobile:text-lg;
+  }
+
+  .responsive-text-2xl {
+    @apply text-2xl mobile:text-xl;
+  }
+
+  /* Responsive Spacing */
+  .responsive-space-x-2 {
+    @apply space-x-2 mobile:space-x-1;
+  }
+
+  .responsive-space-x-4 {
+    @apply space-x-4 mobile:space-x-2;
+  }
+
+  .responsive-space-y-4 {
+    @apply space-y-4 mobile:space-y-2;
+  }
+
+  .responsive-space-y-6 {
+    @apply space-y-6 mobile:space-y-4;
+  }
+
+  /* Responsive Padding/Margin */
+  .responsive-p-4 {
+    @apply p-4 mobile:p-3;
+  }
+
+  .responsive-p-6 {
+    @apply p-6 mobile:p-4;
+  }
+
+  .responsive-px-4 {
+    @apply px-4 mobile:px-3;
+  }
+
+  .responsive-py-4 {
+    @apply py-4 mobile:py-3;
+  }
+
+  /* Card Layouts */
+  .responsive-card-stack {
+    @apply flex flex-col space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 lg:grid-cols-3;
+  }
+
+  .responsive-card-list {
+    @apply space-y-4 md:space-y-6;
+  }
+
+  /* Form Layouts */
+  .responsive-form-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6;
+  }
+
+  .responsive-form-actions {
+    @apply flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 sm:justify-end;
+  }
+
+  /* Navigation Layouts */
+  .responsive-nav-tabs {
+    @apply flex space-x-1 overflow-x-auto scrollbar-hide px-1;
+  }
+
+  .responsive-nav-tab {
+    @apply flex items-center justify-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap min-w-[44px] min-h-[44px] md:space-x-2 md:px-4;
   }
 
   .responsive-card {

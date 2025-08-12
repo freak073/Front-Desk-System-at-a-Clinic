@@ -51,6 +51,6 @@ jobs:
           NEXT_PUBLIC_API_BASE: http://localhost:3001
         run: npm test -- --runInBand
       - name: Build Docker Images
-        run: |
+        run: 
           docker build -t clinic-backend:ci ./backend
           docker build -t clinic-frontend:ci ./frontend

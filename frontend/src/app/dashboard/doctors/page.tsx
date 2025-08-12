@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useDoctorSearchAndFilter } from '../../hooks/useSearchAndFilter';
 import Modal from '../../components/Modal';
 import DoctorCard from '../../components/DoctorCard';
+import FilterBar from '../../components/FilterBar';
+import SearchResults from '../../components/SearchResults';
 import {
   fetchDoctors,
   createDoctor,
@@ -21,32 +24,27 @@ const DoctorManagementPage = () => {
   const [showNewDoctorModal, setShowNewDoctorModal] = useState(false);
   const [showEditDoctorModal, setShowEditDoctorModal] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [specializationFilter, setSpecializationFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  
-  // Debounce search term
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-    
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchTerm]);
+
+  // Enhanced search and filter functionality
+  const searchAndFilter = useDoctorSearchAndFilter(doctors);
+  const {
+    state: { searchTerm, debouncedSearchTerm, filters },
+    actions: { setSearchTerm, setFilter, clearFilters, clearAll },
+    filteredData: filteredDoctors,
+    isFiltered,
+    hasResults,
+    resultCount
+  } = searchAndFilter;
 
   // Search doctors when search term or filters change
   React.useEffect(() => {
     const searchDoctorsDebounced = async () => {
-      if (debouncedSearchTerm || statusFilter !== 'all' || specializationFilter !== 'all' || locationFilter !== 'all') {
+      if (debouncedSearchTerm || filters.status !== 'all' || filters.specialization !== 'all' || filters.location !== 'all') {
         try {
           const doctors = await filterDoctors(
-            specializationFilter !== 'all' ? specializationFilter : undefined,
-            locationFilter !== 'all' ? locationFilter : undefined,
-            statusFilter !== 'all' ? statusFilter : undefined
+            filters.specialization !== 'all' ? filters.specialization : undefined,
+            filters.location !== 'all' ? filters.location : undefined,
+            filters.status !== 'all' ? filters.status : undefined
           );
           setDoctors(doctors);
         } catch (err) {
@@ -64,7 +62,7 @@ const DoctorManagementPage = () => {
     };
 
     searchDoctorsDebounced();
-  }, [debouncedSearchTerm, statusFilter, specializationFilter, locationFilter]);
+  }, [debouncedSearchTerm, filters.status, filters.specialization, filters.location]);
 
   // Fetch initial data
   useEffect(() => {
@@ -89,18 +87,31 @@ const DoctorManagementPage = () => {
   const specializations = Array.from(new Set(doctors.map(d => d.specialization)));
   const locations = Array.from(new Set(doctors.map(d => d.location)));
 
-  // Filter doctors based on search and filters
-  const filteredDoctors = doctors.filter(doctor => {
-    const matchesSearch = !debouncedSearchTerm ||
-      doctor.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      doctor.specialization.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || doctor.status === statusFilter;
-    const matchesSpecialization = specializationFilter === 'all' || doctor.specialization === specializationFilter;
-    const matchesLocation = locationFilter === 'all' || doctor.location === locationFilter;
-    
-    return matchesSearch && matchesStatus && matchesSpecialization && matchesLocation;
-  });
+  // Get filter options with counts
+  const statusOptions = [
+    { value: 'all', label: 'All Statuses', count: doctors.length },
+    { value: 'available', label: 'Available', count: doctors.filter(d => d.status === 'available').length },
+    { value: 'busy', label: 'Busy', count: doctors.filter(d => d.status === 'busy').length },
+    { value: 'off_duty', label: 'Off Duty', count: doctors.filter(d => d.status === 'off_duty').length }
+  ];
+
+  const specializationOptions = [
+    { value: 'all', label: 'All Specializations', count: doctors.length },
+    ...specializations.map(spec => ({
+      value: spec,
+      label: spec,
+      count: doctors.filter(d => d.specialization === spec).length
+    }))
+  ];
+
+  const locationOptions = [
+    { value: 'all', label: 'All Locations', count: doctors.length },
+    ...locations.map(loc => ({
+      value: loc,
+      label: loc,
+      count: doctors.filter(d => d.location === loc).length
+    }))
+  ];
 
   const handleCreateDoctor = async (data: CreateDoctorDto) => {
     try {
@@ -201,112 +212,71 @@ const DoctorManagementPage = () => {
         </button>
       </div>
 
-      {/* Filters */}
-  <div className="bg-surface-900 border border-gray-700 shadow rounded-lg p-4 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-300 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              id="search"
-              placeholder="Search by name or specialization"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
-              Status
-            </label>
-            <select
-              id="status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
-            >
-              <option value="all">All Statuses</option>
-              <option value="available">Available</option>
-              <option value="busy">Busy</option>
-              <option value="off_duty">Off Duty</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="specialization" className="block text-sm font-medium text-gray-300 mb-1">
-              Specialization
-            </label>
-            <select
-              id="specialization"
-              value={specializationFilter}
-              onChange={(e) => setSpecializationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
-            >
-              <option value="all">All Specializations</option>
-              {specializations.map(spec => (
-                <option key={spec} value={spec}>{spec}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">
-              Location
-            </label>
-            <select
-              id="location"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm bg-surface-700 text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent"
-            >
-              <option value="all">All Locations</option>
-              {locations.map(loc => (
-                <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setSpecializationFilter('all');
-                setLocationFilter('all');
-              }}
-              className="w-full px-4 py-2 bg-surface-700 text-gray-200 rounded-md hover:bg-surface-600 transition focus:outline-none focus:ring-2 focus:ring-accent-500"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Enhanced Filters */}
+      <FilterBar
+        search={{
+          placeholder: 'Search by name or specialization...',
+          value: searchTerm,
+          onChange: setSearchTerm,
+          showSearchIcon: true
+        }}
+        selects={[
+          {
+            id: 'status',
+            label: 'Status',
+            value: filters.status || 'all',
+            onChange: (value) => setFilter('status', value),
+            options: statusOptions,
+            showCounts: true
+          },
+          {
+            id: 'specialization',
+            label: 'Specialization',
+            value: filters.specialization || 'all',
+            onChange: (value) => setFilter('specialization', value),
+            options: specializationOptions,
+            showCounts: true
+          },
+          {
+            id: 'location',
+            label: 'Location',
+            value: filters.location || 'all',
+            onChange: (value) => setFilter('location', value),
+            options: locationOptions,
+            showCounts: true
+          }
+        ]}
+        onClear={clearFilters}
+        onClearAll={clearAll}
+        showResultCount={true}
+        resultCount={resultCount}
+        isFiltered={isFiltered}
+        loading={loading}
+      />
 
-      {/* Doctors Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDoctors.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <p className="text-gray-500">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'No doctors match your search criteria' 
-                : 'No doctors found'}
-            </p>
-          </div>
-        ) : (
-          filteredDoctors.map(doctor => (
+      {/* Doctors Grid with Enhanced Search Results */}
+      <SearchResults
+        data={filteredDoctors}
+        searchTerm={debouncedSearchTerm}
+        isFiltered={isFiltered}
+        loading={loading}
+        emptyStateTitle="No doctors registered"
+        emptyStateMessage="No doctors have been registered yet. Add a new doctor to get started."
+        noResultsTitle="No doctors found"
+        noResultsMessage="No doctors match your search criteria. Try adjusting your filters or search terms."
+        showResultCount={false}
+        renderItem={(doctor: Doctor, index: number, searchTerm: string) => (
+          <div key={doctor.id} className="col-span-1">
             <DoctorCard
-              key={doctor.id}
               doctor={doctor}
               onEdit={handleEditDoctor}
               onDelete={handleDeleteDoctor}
               onViewSchedule={handleViewDoctorSchedule}
             />
-          ))
+          </div>
         )}
-      </div>
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+      />
 
       {/* New Doctor Modal */}
       <Modal
