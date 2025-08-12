@@ -1,6 +1,7 @@
 # Front Desk System
+**Assignment Link:** [Clinic Front Desk System Assignment](https://docs.google.com/document/d/1-VfOB6tpuUJTef4wxYxSv6s2lh1b2oVVsjdY2RJk8ag/edit?usp=sharing)
 
-A comprehensive web-based application for managing clinic operations including patient queues, doctor appointments, and staff management.
+A modern, full-stack web application for managing clinic operations including patient queues, appointments, and staff administration—now with enhanced UI and security
 
 ## Project Structure
 
