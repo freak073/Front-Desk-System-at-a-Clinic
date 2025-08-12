@@ -32,6 +32,9 @@ jobs:
       - name: Install Backend Deps
         working-directory: backend
         run: npm ci
+      - name: Create test database
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS clinic_test;"
       - name: Backend Tests
         working-directory: backend
         env:
