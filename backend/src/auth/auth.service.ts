@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from "@nestjs/common";
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -25,9 +29,9 @@ export class AuthService {
   async signup(signupDto: SignupDto): Promise<AuthResponseDto> {
     // Check if username already exists
     const existingUser = await this.userRepository.findOne({
-      where: { username: signupDto.username }
+      where: { username: signupDto.username },
     });
-    
+
     if (existingUser) {
       throw new ConflictException("Username already exists");
     }
@@ -39,7 +43,7 @@ export class AuthService {
     const user = this.userRepository.create({
       username: signupDto.username,
       passwordHash,
-      role: signupDto.role || 'staff',
+      role: signupDto.role || "staff",
       fullName: signupDto.fullName,
     });
 

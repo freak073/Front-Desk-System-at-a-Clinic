@@ -42,7 +42,7 @@ jobs:
           DB_PORT: 3306
           DB_USERNAME: root
           DB_PASSWORD: root
-          DB_NAME: front_desk_system
+          NODE_ENV: test
           JWT_SECRET: testsecret
         run: npm test -- --runInBand
       - name: Install Frontend Deps

@@ -1,4 +1,4 @@
-import * as mysql from 'mysql2/promise';
+import * as mysql from "mysql2/promise";
 
 export interface DatabaseConfig {
   host: string;
@@ -14,7 +14,7 @@ export class MysqlDriver {
 
   constructor(private config: DatabaseConfig) {}
 
-  async createPool(): Promise<mysql.Pool> {
+  createPool(): mysql.Pool {
     if (this.pool) {
       return this.pool;
     }
@@ -33,9 +33,9 @@ export class MysqlDriver {
 
   async getConnection(): Promise<mysql.PoolConnection> {
     if (!this.pool) {
-      await this.createPool();
+      this.createPool();
     }
-    return this.pool!.getConnection();
+    return this.pool.getConnection();
   }
 
   async query(sql: string, values?: any[]): Promise<any> {

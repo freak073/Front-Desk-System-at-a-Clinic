@@ -171,7 +171,12 @@ describe("AuthService", () => {
 
     it("should create new user and return auth response", async () => {
       const hashedPassword = "hashedPassword123";
-      const newUser = { ...mockUser, id: 2, username: "newuser", fullName: "New User" };
+      const newUser = {
+        ...mockUser,
+        id: 2,
+        username: "newuser",
+        fullName: "New User",
+      };
       const mockToken = "jwt-token";
 
       userRepository.findOne.mockResolvedValue(null); // Username doesn't exist
@@ -233,7 +238,12 @@ describe("AuthService", () => {
         password: "Password123",
       };
       const hashedPassword = "hashedPassword123";
-      const newUser = { ...mockUser, id: 3, username: "newuser2", role: "staff" };
+      const newUser = {
+        ...mockUser,
+        id: 3,
+        username: "newuser2",
+        role: "staff",
+      };
       const mockToken = "jwt-token";
 
       userRepository.findOne.mockResolvedValue(null);
