@@ -31,14 +31,15 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => {
-    // Handle login response specially
-    if (response.config.url === '/auth/login' && response.data.access_token) {
-      Cookies.set('auth_token', response.data.access_token);
+    // Handle auth responses specially (login/signup)
+    if ((response.config.url === '/auth/login' || response.config.url === '/auth/signup') && 
+        response.data.data?.access_token) {
+      Cookies.set('auth_token', response.data.data.access_token);
       return {
         ...response,
         data: {
           success: true,
-          data: response.data
+          data: response.data.data
         }
       } as AxiosResponse;
     }
