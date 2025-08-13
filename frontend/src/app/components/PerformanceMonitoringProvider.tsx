@@ -95,10 +95,8 @@ export const PerformanceMonitoringProvider: React.FC<PerformanceMonitoringProvid
     }
   }, [isEnabled, autoLogOnLoad]);
 
-  // Detect long tasks if enabled
-  if (detectLongTasks && isEnabled) {
-    useLongTaskDetection();
-  }
+  // Always call the hook, but pass the enabled state to it
+  useLongTaskDetection(detectLongTasks && isEnabled);
 
   // Toggle performance monitoring
   const toggleMonitoring = () => {

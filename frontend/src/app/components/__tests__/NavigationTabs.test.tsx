@@ -27,11 +27,23 @@ describe('NavigationTabs', () => {
     mockPush.mockClear();
   });
 
-  it('renders all navigation tabs', () => {
+  it('renders all navigation tabs when on management pages', () => {
     mockUsePathname.mockReturnValue('/dashboard/queue');
 
     render(<NavigationTabs />);
 
+    expect(screen.getByText('Dashboard Home')).toBeInTheDocument();
+    expect(screen.getByText('Queue Management')).toBeInTheDocument();
+    expect(screen.getByText('Appointment Management')).toBeInTheDocument();
+    expect(screen.getByText('Doctor Management')).toBeInTheDocument();
+  });
+
+  it('hides home button when on dashboard home page', () => {
+    mockUsePathname.mockReturnValue('/dashboard');
+
+    render(<NavigationTabs />);
+
+    expect(screen.queryByText('Dashboard Home')).not.toBeInTheDocument();
     expect(screen.getByText('Queue Management')).toBeInTheDocument();
     expect(screen.getByText('Appointment Management')).toBeInTheDocument();
     expect(screen.getByText('Doctor Management')).toBeInTheDocument();
@@ -67,6 +79,15 @@ describe('NavigationTabs', () => {
     expect(doctorTab).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('shows correct active state for dashboard home tab', () => {
+    mockUsePathname.mockReturnValue('/dashboard');
+
+    render(<NavigationTabs />);
+
+    const homeTab = screen.getByRole('tab', { name: /dashboard home/i });
+    expect(homeTab).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('handles nested routes correctly', () => {
     mockUsePathname.mockReturnValue('/dashboard/appointments/new');
 
@@ -76,7 +97,7 @@ describe('NavigationTabs', () => {
     expect(appointmentTab).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('has proper accessibility attributes', () => {
+  it('has proper accessibility attributes on management pages', () => {
     mockUsePathname.mockReturnValue('/dashboard/queue');
 
     render(<NavigationTabs />);
@@ -85,7 +106,23 @@ describe('NavigationTabs', () => {
     expect(nav).toBeInTheDocument();
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
+
+    tabs.forEach(tab => {
+      expect(tab).toHaveAttribute('aria-selected');
+    });
+  });
+
+  it('has proper accessibility attributes on dashboard home', () => {
+    mockUsePathname.mockReturnValue('/dashboard');
+
+    render(<NavigationTabs />);
+
+    const nav = screen.getByRole('tablist');
+    expect(nav).toBeInTheDocument();
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(3); // No home button on dashboard home
 
     tabs.forEach(tab => {
       expect(tab).toHaveAttribute('aria-selected');
@@ -98,6 +135,8 @@ describe('NavigationTabs', () => {
     render(<NavigationTabs />);
 
     // Check that both full names and short names are present
+    expect(screen.getByText('Dashboard Home')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Queue Management')).toBeInTheDocument();
     expect(screen.getByText('Queue')).toBeInTheDocument();
   });

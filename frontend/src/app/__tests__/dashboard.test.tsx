@@ -62,9 +62,11 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Welcome back, testuser. Here\'s what\'s happening today.')).toBeInTheDocument();
   });
 
-  it('renders navigation tabs with all management sections', () => {
+  it('renders navigation tabs without home button on dashboard home page', () => {
     render(<DashboardPage />);
     
+    // Navigation tabs should be present but without the home button
+    expect(screen.queryByText('Dashboard Home')).not.toBeInTheDocument();
     expect(screen.getByText('Queue Management')).toBeInTheDocument();
     expect(screen.getByText('Appointment Management')).toBeInTheDocument();
     expect(screen.getByText('Doctor Management')).toBeInTheDocument();

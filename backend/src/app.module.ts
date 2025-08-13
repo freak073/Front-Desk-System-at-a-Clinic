@@ -1,8 +1,8 @@
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common";
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { APP_INTERCEPTOR, APP_FILTER } from "@nestjs/core";
+import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { AppController } from "./app.controller";
 import { AuthModule } from "./auth/auth.module";
 import { DoctorsModule } from "./doctors/doctors.module";
@@ -11,6 +11,7 @@ import { QueueModule } from "./queue/queue.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { MonitoringModule } from "./monitoring/monitoring.module";
+import { SecurityModule } from "./security/security.module";
 import {
   PerformanceMiddleware,
   ResponseCacheMiddleware,
@@ -26,6 +27,9 @@ import { CacheService } from "./services/cache.service";
 import { QueryOptimizationService } from "./services/query-optimization.service";
 import { ErrorMonitoringService } from "./services/error-monitoring.service";
 import { GlobalExceptionFilter } from "./filters/global-exception.filter";
+import { AuditInterceptor } from "./security/audit.interceptor";
+import { CSRFMiddleware } from "./security/csrf.middleware";
+import { ThrottlerGuard } from "@nestjs/throttler";
 import { resolveDatabaseName } from "./database/db-config";
 
 @Module({
@@ -65,6 +69,7 @@ import { resolveDatabaseName } from "./database/db-config";
     AppointmentsModule,
     DashboardModule,
     MonitoringModule,
+    SecurityModule,
   ],
   controllers: [AppController],
   providers: [
@@ -95,7 +100,11 @@ import { resolveDatabaseName } from "./database/db-config";
       useClass: DataTransformInterceptor,
     },
     {
-      provide: "APP_GUARD",
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
+    },
+    {
+      provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
   ],
@@ -104,6 +113,7 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(
+        CSRFMiddleware,
         PerformanceMiddleware,
         ResponseCacheMiddleware,
         QueryOptimizationMiddleware,

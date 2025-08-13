@@ -8,7 +8,9 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  Req,
 } from "@nestjs/common";
+import { Request } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto, SignupDto, AuthResponseDto, RefreshTokenDto } from "./dto";
 import { ApiResponseDto } from "../common/dto/api-response.dto";
@@ -16,36 +18,91 @@ import { LocalAuthGuard } from "./guards/local-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { User } from "../entities/user.entity";
+import { Audit, AuditContext } from "../security/audit.decorator";
+import { AuditService } from "../security/audit.service";
 
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Post("signup")
   @HttpCode(HttpStatus.CREATED)
+  @Audit({ action: 'signup', resource: 'user', description: 'User registration' })
   async signup(
     @Body(ValidationPipe) signupDto: SignupDto,
+    @Req() req: Request,
   ): Promise<ApiResponseDto<AuthResponseDto>> {
-    const auth = await this.authService.signup(signupDto);
-    return ApiResponseDto.success(auth, "User registered successfully");
+    try {
+      const auth = await this.authService.signup(signupDto);
+      
+      await this.auditService.logAuthEvent('signup', true, {
+        username: signupDto.username,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+      
+      return ApiResponseDto.success(auth, "User registered successfully");
+    } catch (error) {
+      await this.auditService.logAuthEvent('signup', false, {
+        username: signupDto.username,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        errorMessage: error.message,
+      });
+      throw error;
+    }
   }
 
   @UseGuards(LocalAuthGuard)
   @Post("login")
   @HttpCode(HttpStatus.OK)
+  @Audit({ action: 'login', resource: 'authentication', description: 'User login' })
   async login(
     @Body(ValidationPipe) loginDto: LoginDto,
-    @CurrentUser() _user: User,
+    @CurrentUser() user: User,
+    @Req() req: Request,
   ): Promise<ApiResponseDto<AuthResponseDto>> {
-    const auth = await this.authService.login(loginDto);
-    return ApiResponseDto.success(auth);
+    try {
+      const auth = await this.authService.login(loginDto);
+      
+      await this.auditService.logAuthEvent('login', true, {
+        userId: user.id,
+        username: user.username,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      });
+      
+      return ApiResponseDto.success(auth);
+    } catch (error) {
+      await this.auditService.logAuthEvent('login', false, {
+        username: loginDto.username,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        errorMessage: error.message,
+      });
+      throw error;
+    }
   }
 
   @UseGuards(JwtAuthGuard)
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  logout(): ApiResponseDto<{ message: string }> {
+  @Audit({ action: 'logout', resource: 'authentication', description: 'User logout' })
+  async logout(
+    @CurrentUser() user: User,
+    @Req() req: Request,
+  ): Promise<ApiResponseDto<{ message: string }>> {
+    await this.auditService.logAuthEvent('logout', true, {
+      userId: user.id,
+      username: user.username,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    });
+    
     // JWT tokens are stateless, so logout is handled client-side
     // by removing the token from storage
     return ApiResponseDto.success({ message: "Logged out successfully" });

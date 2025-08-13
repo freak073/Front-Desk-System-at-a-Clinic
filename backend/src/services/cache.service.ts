@@ -201,4 +201,180 @@ export class CacheService {
 
     return `${prefix}${paramString}`;
   }
+
+  /**
+   * Cache with automatic invalidation based on tags
+   */
+  private taggedCache = new Map<string, Set<string>>();
+
+  /**
+   * Set value with tags for group invalidation
+   * @param key - Cache key
+   * @param value - Value to cache
+   * @param tags - Tags for group invalidation
+   * @param ttl - Time-to-live in seconds
+   */
+  setWithTags<T>(key: string, value: T, tags: string[], ttl?: number): boolean {
+    if (!this.enabled) {
+      return false;
+    }
+
+    const success = this.set(key, value, ttl);
+    
+    if (success) {
+      // Associate key with tags
+      tags.forEach(tag => {
+        if (!this.taggedCache.has(tag)) {
+          this.taggedCache.set(tag, new Set());
+        }
+        this.taggedCache.get(tag)!.add(key);
+      });
+    }
+    
+    return success;
+  }
+
+  /**
+   * Invalidate all cache entries with specific tags
+   * @param tags - Tags to invalidate
+   */
+  invalidateByTags(tags: string[]): void {
+    if (!this.enabled) {
+      return;
+    }
+
+    const keysToDelete = new Set<string>();
+    
+    tags.forEach(tag => {
+      const taggedKeys = this.taggedCache.get(tag);
+      if (taggedKeys) {
+        taggedKeys.forEach(key => keysToDelete.add(key));
+        this.taggedCache.delete(tag);
+      }
+    });
+
+    keysToDelete.forEach(key => this.delete(key));
+    this.logger.debug(`Invalidated ${keysToDelete.size} cache entries for tags: ${tags.join(', ')}`);
+  }
+
+  /**
+   * Multi-level cache with L1 (memory) and L2 (persistent) support
+   */
+  async getMultiLevel<T>(key: string): Promise<T | null> {
+    // L1 cache (memory)
+    const l1Value = this.get<T>(key);
+    if (l1Value !== null) {
+      return l1Value;
+    }
+
+    // L2 cache would be implemented here (Redis, file system, etc.)
+    // For now, just return null
+    return null;
+  }
+
+  /**
+   * Set value in multi-level cache
+   */
+  async setMultiLevel<T>(key: string, value: T, ttl?: number): Promise<boolean> {
+    // Set in L1 cache
+    const l1Success = this.set(key, value, ttl);
+    
+    // L2 cache would be implemented here
+    // For now, just return L1 result
+    return l1Success;
+  }
+
+  /**
+   * Batch operations for better performance
+   */
+  mget<T>(keys: string[]): Map<string, T> {
+    const results = new Map<string, T>();
+    
+    if (!this.enabled) {
+      return results;
+    }
+
+    keys.forEach(key => {
+      const value = this.get<T>(key);
+      if (value !== null) {
+        results.set(key, value);
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Set multiple values at once
+   */
+  mset<T>(entries: Array<{ key: string; value: T; ttl?: number }>): boolean {
+    if (!this.enabled) {
+      return false;
+    }
+
+    let allSuccess = true;
+    entries.forEach(({ key, value, ttl }) => {
+      const success = this.set(key, value, ttl);
+      if (!success) {
+        allSuccess = false;
+      }
+    });
+
+    return allSuccess;
+  }
+
+  /**
+   * Cache warming - preload frequently accessed data
+   */
+  async warmCache(warmingFunctions: Array<{
+    key: string;
+    fn: () => Promise<any>;
+    ttl?: number;
+    tags?: string[];
+  }>): Promise<void> {
+    this.logger.log(`Warming cache with ${warmingFunctions.length} entries`);
+    
+    const promises = warmingFunctions.map(async ({ key, fn, ttl, tags }) => {
+      try {
+        const value = await fn();
+        if (tags) {
+          this.setWithTags(key, value, tags, ttl);
+        } else {
+          this.set(key, value, ttl);
+        }
+      } catch (error) {
+        this.logger.error(`Failed to warm cache for key ${key}: ${error.message}`);
+      }
+    });
+
+    await Promise.allSettled(promises);
+    this.logger.log('Cache warming completed');
+  }
+
+  /**
+   * Get cache hit ratio for monitoring
+   */
+  getHitRatio(): number {
+    const stats = this.getStats();
+    const total = stats.hits + stats.misses;
+    return total > 0 ? stats.hits / total : 0;
+  }
+
+  /**
+   * Monitor cache performance
+   */
+  getPerformanceMetrics(): {
+    hitRatio: number;
+    keyCount: number;
+    memoryUsage: number;
+    stats: NodeCache.Stats;
+  } {
+    const stats = this.getStats();
+    return {
+      hitRatio: this.getHitRatio(),
+      keyCount: stats.keys,
+      memoryUsage: process.memoryUsage().heapUsed,
+      stats,
+    };
+  }
 }

@@ -1,0 +1,165 @@
+{
+  "timestamp": "2025-08-13T15:06:14.952Z",
+  "overallScore": 138,
+  "maxScore": 165,
+  "checks": [
+    {
+      "category": "Authentication",
+      "name": "JWT Secret Strength",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "JWT secret is properly configured"
+    },
+    {
+      "category": "Authentication",
+      "name": "JWT Expiration",
+      "status": "WARNING",
+      "score": 5,
+      "maxScore": 10,
+      "description": "JWT expiration should be shorter for better security",
+      "details": "Consider using shorter expiration times like 1h or 2h"
+    },
+    {
+      "category": "Authentication",
+      "name": "Password Hashing",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "Using bcrypt for password hashing"
+    },
+    {
+      "category": "Input Validation",
+      "name": "XSS Protection",
+      "status": "PASS",
+      "score": 15,
+      "maxScore": 15,
+      "description": "XSS protection is working correctly"
+    },
+    {
+      "category": "Input Validation",
+      "name": "SQL Injection Protection",
+      "status": "PASS",
+      "score": 15,
+      "maxScore": 15,
+      "description": "SQL injection protection is working correctly"
+    },
+    {
+      "category": "Input Validation",
+      "name": "Validation Pipes",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "Global validation pipes are configured"
+    },
+    {
+      "category": "Rate Limiting",
+      "name": "Rate Limit Configuration",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "Rate limiting is properly configured"
+    },
+    {
+      "category": "Rate Limiting",
+      "name": "Enhanced Throttler Guard",
+      "status": "PASS",
+      "score": 5,
+      "maxScore": 5,
+      "description": "Enhanced throttler guard with audit logging is configured"
+    },
+    {
+      "category": "CORS",
+      "name": "CORS Origins",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "CORS origins are configured for development"
+    },
+    {
+      "category": "CORS",
+      "name": "CORS Credentials",
+      "status": "PASS",
+      "score": 5,
+      "maxScore": 5,
+      "description": "CORS credentials are properly configured"
+    },
+    {
+      "category": "Security Headers",
+      "name": "Content Security Policy",
+      "status": "WARNING",
+      "score": 5,
+      "maxScore": 10,
+      "description": "CSP is disabled (development mode)"
+    },
+    {
+      "category": "Security Headers",
+      "name": "HSTS",
+      "status": "PASS",
+      "score": 5,
+      "maxScore": 5,
+      "description": "HSTS is configured"
+    },
+    {
+      "category": "Security Headers",
+      "name": "X-Content-Type-Options",
+      "status": "PASS",
+      "score": 5,
+      "maxScore": 5,
+      "description": "nosniff header is configured"
+    },
+    {
+      "category": "Audit Logging",
+      "name": "Audit Logging Enabled",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "Audit logging is enabled"
+    },
+    {
+      "category": "Audit Logging",
+      "name": "Sensitive Operations Coverage",
+      "status": "PASS",
+      "score": 5,
+      "maxScore": 5,
+      "description": "19 sensitive operations are tracked"
+    },
+    {
+      "category": "Environment",
+      "name": "Production Mode",
+      "status": "WARNING",
+      "score": 3,
+      "maxScore": 5,
+      "description": "Not running in production mode"
+    },
+    {
+      "category": "Environment",
+      "name": "Database Password",
+      "status": "FAIL",
+      "score": 0,
+      "maxScore": 10,
+      "description": "Database password is weak or default"
+    },
+    {
+      "category": "Environment",
+      "name": "CSRF Secret",
+      "status": "FAIL",
+      "score": 0,
+      "maxScore": 5,
+      "description": "CSRF secret is default or missing"
+    },
+    {
+      "category": "Dependencies",
+      "name": "Vulnerability Scan",
+      "status": "PASS",
+      "score": 10,
+      "maxScore": 10,
+      "description": "No known vulnerable dependencies found"
+    }
+  ],
+  "recommendations": [
+    "Consider shorter JWT expiration times for better security",
+    "Use a strong database password",
+    "Set a unique CSRF secret"
+  ]
+}

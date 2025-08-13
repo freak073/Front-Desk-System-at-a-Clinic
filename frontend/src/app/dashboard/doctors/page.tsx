@@ -7,6 +7,7 @@ import Modal from '../../components/Modal';
 import DoctorCard from '../../components/DoctorCard';
 import FilterBar from '../../components/FilterBar';
 import SearchResults from '../../components/SearchResults';
+import NavigationTabs from '../../components/NavigationTabs';
 import {
   fetchDoctors,
   createDoctor,
@@ -238,6 +239,8 @@ const DoctorManagementPage = () => {
 
       <div className="relative z-10">
         <div className="p-4 sm:p-6 md:p-8">
+          {/* Navigation Tabs */}
+          <NavigationTabs />
           <div className="flex flex-col space-y-6 mb-8 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/25">

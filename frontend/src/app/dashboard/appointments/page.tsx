@@ -20,7 +20,6 @@ import { apiService } from '../../../lib/api';
 import { highlightMatch } from '../../components/highlight';
 import FilterBar from '../../components/FilterBar';
 import SearchResults from '../../components/SearchResults';
-import Header from '../../components/Header';
 import NavigationTabs from '../../components/NavigationTabs';
 
 const AppointmentsPage = () => {
@@ -258,8 +257,6 @@ const AppointmentsPage = () => {
       </div>
 
       <div className="relative z-10">
-        <Header />
-        
         <div className="responsive-container">
           <div className="flex flex-col space-y-6 mb-8 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
             <div className="flex items-center space-x-4">

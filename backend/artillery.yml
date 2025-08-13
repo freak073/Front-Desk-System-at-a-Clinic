@@ -1,0 +1,117 @@
+config:
+  target: 'http://localhost:3001'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down"
+  processor: "./test/artillery-processor.js"
+  
+scenarios:
+  - name: "Authentication Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - get:
+          url: "/auth/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/auth/logout"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Queue Management"
+    weight: 40
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - get:
+          url: "/queue"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/queue"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            name: "Load Test Patient {{ $randomString() }}"
+            contactInfo: "{{ $randomPhoneNumber() }}"
+            priority: "{{ $randomPriority() }}"
+      - get:
+          url: "/queue?search={{ $randomName() }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Appointment Management"
+    weight: 20
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - get:
+          url: "/appointments"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/doctors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/appointments"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            patientName: "Appointment Patient {{ $randomString() }}"
+            doctorId: "{{ $randomDoctorId() }}"
+            appointmentDatetime: "{{ $futureDate() }}"
+
+  - name: "Doctor Management"
+    weight: 10
+    flow:
+      - post:
+          url: "/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.access_token"
+              as: "authToken"
+      - get:
+          url: "/doctors"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/doctors?specialization=Cardiology"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/doctors?status=available"
+          headers:
+            Authorization: "Bearer {{ authToken }}"

@@ -1,0 +1,152 @@
+{
+  "testSuites": {
+    "unit": {
+      "description": "Unit tests for individual components and functions",
+      "backend": {
+        "command": "cd backend && npm run test",
+        "coverage": true,
+        "timeout": 300000
+      },
+      "frontend": {
+        "command": "cd frontend && npm run test",
+        "coverage": true,
+        "timeout": 300000
+      }
+    },
+    "integration": {
+      "description": "Integration tests for API endpoints and database operations",
+      "backend": {
+        "command": "cd backend && npm run test:integration",
+        "requiresDatabase": true,
+        "timeout": 600000
+      }
+    },
+    "component": {
+      "description": "Component tests for React components using React Testing Library",
+      "frontend": {
+        "command": "cd frontend && npm run test:components",
+        "coverage": true,
+        "timeout": 300000
+      }
+    },
+    "e2e": {
+      "description": "End-to-end tests for complete user workflows",
+      "frontend": {
+        "command": "cd frontend && npm run test:e2e",
+        "requiresFullStack": true,
+        "browsers": ["chromium", "firefox", "webkit"],
+        "timeout": 1800000
+      }
+    },
+    "accessibility": {
+      "description": "Accessibility tests for WCAG 2.1 AA compliance",
+      "frontend": {
+        "command": "cd frontend && npm run test:accessibility",
+        "requiresFullStack": true,
+        "standards": ["WCAG 2.1 AA"],
+        "timeout": 900000
+      }
+    },
+    "performance": {
+      "description": "Performance tests for response times and load handling",
+      "backend": {
+        "command": "cd backend && npm run test:performance",
+        "requiresDatabase": true,
+        "timeout": 600000
+      },
+      "frontend": {
+        "command": "cd frontend && npm run test:performance:e2e",
+        "requiresFullStack": true,
+        "timeout": 900000
+      },
+      "load": {
+        "command": "cd backend && npm run test:load",
+        "requiresFullStack": true,
+        "timeout": 1200000
+      }
+    },
+    "crossBrowser": {
+      "description": "Cross-browser compatibility tests",
+      "frontend": {
+        "command": "cd frontend && npx playwright test --project=",
+        "browsers": ["chromium", "firefox", "webkit", "Mobile Chrome", "Mobile Safari"],
+        "requiresFullStack": true,
+        "timeout": 1800000
+      }
+    }
+  },
+  "requirements": {
+    "responseTime": {
+      "description": "All operations must respond within 2 seconds",
+      "threshold": 2000,
+      "unit": "milliseconds"
+    },
+    "accessibility": {
+      "description": "WCAG 2.1 AA compliance",
+      "standard": "WCAG 2.1 AA",
+      "tools": ["axe-core", "playwright-axe"]
+    },
+    "coverage": {
+      "description": "Code coverage thresholds",
+      "backend": {
+        "statements": 80,
+        "branches": 75,
+        "functions": 80,
+        "lines": 80
+      },
+      "frontend": {
+        "statements": 85,
+        "branches": 80,
+        "functions": 85,
+        "lines": 85
+      }
+    },
+    "performance": {
+      "description": "Performance benchmarks",
+      "loadTesting": {
+        "concurrentUsers": 50,
+        "duration": 300,
+        "errorRate": 1
+      },
+      "coreWebVitals": {
+        "FCP": 1800,
+        "LCP": 2500,
+        "CLS": 0.1
+      }
+    }
+  },
+  "environment": {
+    "test": {
+      "database": {
+        "host": "localhost",
+        "port": 3306,
+        "username": "root",
+        "password": "root",
+        "database": "front_desk_test"
+      },
+      "backend": {
+        "port": 3001,
+        "url": "http://localhost:3001"
+      },
+      "frontend": {
+        "port": 3000,
+        "url": "http://localhost:3000"
+      }
+    }
+  },
+  "reporting": {
+    "formats": ["html", "json", "junit"],
+    "coverage": {
+      "formats": ["lcov", "html", "text"],
+      "directory": "coverage"
+    },
+    "accessibility": {
+      "formats": ["html", "json"],
+      "directory": "accessibility-reports"
+    },
+    "performance": {
+      "formats": ["html", "json"],
+      "directory": "performance-reports"
+    }
+  }
+}

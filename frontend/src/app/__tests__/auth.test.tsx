@@ -128,8 +128,8 @@ describe('Auth Flow', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your password'), { target: { value: 'validpass' } });
     fireEvent.click(screen.getByText('Login'));
     await waitFor(() => {
-      expect(screen.getByText(/Front Desk Dashboard/)).toBeInTheDocument();
-      expect(screen.getByText(/Use the navigation tabs above to manage Queue, Appointments, Doctors, and Patients./)).toBeInTheDocument();
+      expect(screen.getByText(/Dashboard/)).toBeInTheDocument();
+      expect(screen.getByText(/Welcome back/)).toBeInTheDocument();
     });
   });
 
@@ -185,6 +185,6 @@ describe('Auth Flow', () => {
     });
     
     // Should show dashboard content
-  expect(screen.getByText(/Use the navigation tabs above to manage Queue, Appointments, Doctors, and Patients./)).toBeInTheDocument();
+  expect(screen.getByText(/Dashboard/)).toBeInTheDocument();
   });
 });

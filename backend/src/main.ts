@@ -3,8 +3,10 @@ import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import helmet from "helmet";
 import * as compression from "compression";
+import * as cookieParser from "cookie-parser";
 import { buildRuntimeDbLog } from "./database/db-config";
 import { Request, Response, NextFunction } from "express";
+import { SecurityConfigService } from "./security/security.config";
 
 function sanitize(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
@@ -32,40 +34,36 @@ async function bootstrap(): Promise<void> {
     1,
   );
 
-  app.use(
-    helmet({
-      crossOriginResourcePolicy: { policy: "cross-origin" },
-      contentSecurityPolicy:
-        process.env.NODE_ENV === "production" ? undefined : false,
-    }),
-  );
+  // Get security configuration
+  const securityConfigService = app.get(SecurityConfigService);
+  const securityConfig = securityConfigService.getSecurityConfig();
+
+  // Enhanced helmet configuration
+  app.use(helmet(securityConfig.helmet));
+
+  // Cookie parser for CSRF tokens
+  app.use(cookieParser());
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.use(compression());
 
-  const allowedOrigins = (
-    process.env.CORS_ORIGINS ||
-    process.env.FRONTEND_URL ||
-    "http://localhost:3000"
-  )
-    .split(",")
-    .map((o) => o.trim());
+  // Enhanced CORS configuration
   app.enableCors({
     origin: (origin, cb) => {
       // Allow requests with no origin (like mobile apps, curl, Postman, etc.)
       if (!origin) return cb(null, true);
       // Allow configured origins
-      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (securityConfig.cors.origins.includes(origin)) return cb(null, true);
       // In development, be more permissive
       if (process.env.NODE_ENV === "development") {
         return cb(null, true);
       }
       return cb(new Error("Not allowed by CORS"));
     },
-    credentials: true,
-    methods: "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization,Accept",
-    maxAge: 600,
+    credentials: securityConfig.cors.credentials,
+    methods: securityConfig.cors.methods,
+    allowedHeaders: securityConfig.cors.allowedHeaders,
+    maxAge: securityConfig.cors.maxAge,
   });
 
   app.useGlobalPipes(

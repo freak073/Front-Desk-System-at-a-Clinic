@@ -4,6 +4,8 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { LoginDto, SignupDto, AuthResponseDto } from "./dto";
 import { User } from "../entities/user.entity";
+import { AuditService } from "../security/audit.service";
+import { Request } from "express";
 
 describe("AuthController", () => {
   let controller: AuthController;
@@ -35,6 +37,11 @@ describe("AuthController", () => {
       validateUser: jest.fn(),
       hashPassword: jest.fn(),
       findUserById: jest.fn(),
+      issueFromUser: jest.fn(),
+    };
+
+    const mockAuditService = {
+      logAuthEvent: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +50,10 @@ describe("AuthController", () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
       ],
     }).compile();
@@ -73,9 +84,14 @@ describe("AuthController", () => {
         },
       };
 
+      const mockRequest = {
+        ip: "127.0.0.1",
+        headers: { "user-agent": "test-agent" },
+      } as Request;
+
       authService.signup.mockResolvedValue(newUserAuthResponse);
 
-      const result = await controller.signup(signupDto);
+      const result = await controller.signup(signupDto, mockRequest);
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(newUserAuthResponse);
@@ -85,11 +101,16 @@ describe("AuthController", () => {
     });
 
     it("should throw ConflictException when username already exists", async () => {
+      const mockRequest = {
+        ip: "127.0.0.1",
+        headers: { "user-agent": "test-agent" },
+      } as Request;
+
       authService.signup.mockRejectedValue(
         new ConflictException("Username already exists"),
       );
 
-      await expect(controller.signup(signupDto)).rejects.toThrow(
+      await expect(controller.signup(signupDto, mockRequest)).rejects.toThrow(
         ConflictException,
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -104,9 +125,14 @@ describe("AuthController", () => {
     };
 
     it("should return auth response when login is successful", async () => {
+      const mockRequest = {
+        ip: "127.0.0.1",
+        headers: { "user-agent": "test-agent" },
+      } as Request;
+
       authService.login.mockResolvedValue(mockAuthResponse);
 
-      const result = await controller.login(loginDto, mockUser);
+      const result = await controller.login(loginDto, mockUser, mockRequest);
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockAuthResponse);
@@ -115,11 +141,16 @@ describe("AuthController", () => {
     });
 
     it("should throw UnauthorizedException when login fails", async () => {
+      const mockRequest = {
+        ip: "127.0.0.1",
+        headers: { "user-agent": "test-agent" },
+      } as Request;
+
       authService.login.mockRejectedValue(
         new UnauthorizedException("Invalid credentials"),
       );
 
-      await expect(controller.login(loginDto, mockUser)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockUser, mockRequest)).rejects.toThrow(
         UnauthorizedException,
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -128,8 +159,13 @@ describe("AuthController", () => {
   });
 
   describe("logout", () => {
-    it("should return success message", () => {
-      const result = controller.logout();
+    it("should return success message", async () => {
+      const mockRequest = {
+        ip: "127.0.0.1",
+        headers: { "user-agent": "test-agent" },
+      } as Request;
+
+      const result = await controller.logout(mockUser, mockRequest);
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ message: "Logged out successfully" });
     });

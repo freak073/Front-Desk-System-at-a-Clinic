@@ -6,6 +6,16 @@ import { usePathname } from 'next/navigation';
 
 const tabs = [
   { 
+    name: 'Dashboard Home', 
+    href: '/dashboard',
+    shortName: 'Home',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    )
+  },
+  { 
     name: 'Queue Management', 
     href: '/dashboard/queue',
     shortName: 'Queue',
@@ -64,22 +74,33 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ className = '' }) => {
   const getCurrentTab = () => {
     if (!isClient || !pathname) return null;
     
-    for (const tab of tabs) {
+    // Handle exact dashboard home match first
+    if (pathname === '/dashboard') {
+      return '/dashboard';
+    }
+    
+    // Then check other tabs (excluding dashboard home to avoid conflicts)
+    for (const tab of tabs.slice(1)) {
       if (pathname === tab.href || pathname.startsWith(tab.href + '/')) {
         return tab.href;
       }
     }
+    
     return null;
   };
 
   const currentTab = getCurrentTab();
+  
+  // Filter tabs based on current page - hide home button when on dashboard home
+  const isOnDashboardHome = pathname === '/dashboard';
+  const visibleTabs = isOnDashboardHome ? tabs.slice(1) : tabs; // Remove home tab when on dashboard home
 
   if (!isClient) {
     return (
       <div className={`mb-12 ${className}`}>
         <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-2">
           <nav className="flex space-x-2 overflow-x-auto scrollbar-hide">
-            {tabs.map(tab => (
+            {visibleTabs.map(tab => (
               <div
                 key={tab.name}
                 className="flex items-center space-x-3 px-6 py-4 rounded-xl animate-pulse whitespace-nowrap"
@@ -101,7 +122,7 @@ const NavigationTabs: React.FC<NavigationTabsProps> = ({ className = '' }) => {
     <div className={`mb-12 ${className}`}>
       <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-2">
         <nav className="flex space-x-2 overflow-x-auto scrollbar-hide" role="tablist">
-          {tabs.map(tab => {
+          {visibleTabs.map(tab => {
             const isActive = currentTab === tab.href;
             
             return (

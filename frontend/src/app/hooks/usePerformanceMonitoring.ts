@@ -203,11 +203,12 @@ export function useSlowRenderDetection(threshold = 16) {
 
 /**
  * Hook to detect long tasks
+ * @param enabled - Whether long task detection is enabled
  */
-export function useLongTaskDetection(): void {
+export function useLongTaskDetection(enabled: boolean = true): void {
   useEffect(() => {
-    // Skip if PerformanceObserver is not available
-    if (typeof PerformanceObserver === 'undefined') {
+    // Skip if not enabled or PerformanceObserver is not available
+    if (!enabled || typeof PerformanceObserver === 'undefined') {
       return;
     }
     
@@ -231,7 +232,7 @@ export function useLongTaskDetection(): void {
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [enabled]);
 }
 
 /**

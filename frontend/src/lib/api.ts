@@ -1,5 +1,6 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import Cookies from 'js-cookie';
+import { getCsrfToken, clearCsrfToken } from './csrf';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -14,13 +15,25 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and CSRF token
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const token = Cookies.get('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add CSRF token for state-changing methods
+    if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+      try {
+        const csrfToken = await getCsrfToken();
+        config.headers['x-csrf-token'] = csrfToken;
+      } catch (error) {
+        console.warn('Failed to get CSRF token:', error);
+        // Continue with request - let server handle the error
+      }
+    }
+
     return config;
   },
   (error: AxiosError) => {
@@ -54,9 +67,15 @@ api.interceptors.response.use(
     if (error.response.status === 401) {
       // Handle unauthorized access
       Cookies.remove('auth_token');
+      clearCsrfToken();
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
+    }
+
+    if (error.response.status === 403 && (error.response.data as { message?: string })?.message?.includes('CSRF')) {
+      // Clear CSRF token on CSRF errors to force refresh
+      clearCsrfToken();
     }
 
     const errorMessage = 
