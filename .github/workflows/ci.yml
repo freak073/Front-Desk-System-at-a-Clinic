@@ -32,6 +32,9 @@ jobs:
       - name: Install Backend Deps
         working-directory: backend
         run: npm ci
+      - name: Create test database
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS clinic_test;"
       - name: Backend Tests
         working-directory: backend
         env:
@@ -39,7 +42,7 @@ jobs:
           DB_PORT: 3306
           DB_USERNAME: root
           DB_PASSWORD: root
-          DB_NAME: front_desk_system
+          NODE_ENV: test
           JWT_SECRET: testsecret
         run: npm test -- --runInBand
       - name: Install Frontend Deps
